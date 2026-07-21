@@ -104,9 +104,3 @@ curl -X POST -F "file=@sample.log" http://localhost:8080/api/v1/logs/analyze
 - `MultipartFile` ile dosya validasyonu ve Spring'in kendi multipart boyut limitinin ayarlanması
 - `MockMvc` ile controller seviyesinde test yazımı
 - Map üzerinden frekans sayımı ve `Stream` ile sıralama/dönüştürme
-
-## Teslim Edilecekler
-- [x] Git repository (kaynak kod + README.md)
-- [x] Başarılı `mvn clean test` çıktısı
-- [x] Örnek log dosyası (`sample.log`)
-- [x] Örnek API isteği ve cevabı (yukarıda)
