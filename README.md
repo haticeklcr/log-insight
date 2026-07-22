@@ -34,6 +34,7 @@ log-insight/
 │ │ └── config/ # CORS gibi uygulama genelinde ayarlar
 │ ├── src/test/java/ # Backend testleri
 │ ├── sample.log # Örnek log dosyası
+  │   ├── sample2.log # İkinci örnek log dosyası
 │ ├── pom.xml
 │ └── Dockerfile
 ├── frontend/ # React + TypeScript web arayüzü
