@@ -1,6 +1,6 @@
 import type { LogAnalysisResponse, ApiError } from "../types/logAnalysis";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export class LogAnalysisApiError extends Error {
   status: number;
