@@ -93,6 +93,7 @@ export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
           className={styles.hiddenInput}
           onChange={handleInputChange}
           disabled={isLoading}
+          data-testid="file-input"
         />
       </div>
 
