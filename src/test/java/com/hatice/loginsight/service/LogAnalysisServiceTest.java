@@ -6,6 +6,7 @@ import com.hatice.loginsight.exception.FileTooLargeException;
 import com.hatice.loginsight.exception.UnsupportedFileTypeException;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.util.unit.DataSize;
 
 import java.nio.charset.StandardCharsets;
 
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LogAnalysisServiceTest {
 
-    private final LogAnalysisService service = new LogAnalysisService();
+    private final LogAnalysisService service = new LogAnalysisService(DataSize.ofMegabytes(1));
 
     private static final String SAMPLE_LOG_CONTENT =
             "2026-01-01 10:00:00 INFO Application started\n" +
@@ -86,11 +87,21 @@ class LogAnalysisServiceTest {
     }
 
     @Test
-    void rejectsFileExceedingSizeLimit() {
-        byte[] oversized = new byte[6 * 1024 * 1024];
+    void rejectsFileExceedingConfiguredSizeLimit() {
+        byte[] oversized = new byte[2 * 1024 * 1024];
         MockMultipartFile file = new MockMultipartFile(
                 "file", "large.log", "text/plain", oversized);
 
         assertThrows(FileTooLargeException.class, () -> service.analyze(file));
+    }
+
+    @Test
+    void appliesDifferentConfiguredSizeLimitWhenInjectedDifferently() {
+        LogAnalysisService serviceWithSmallerLimit = new LogAnalysisService(DataSize.ofKilobytes(1));
+        byte[] slightlyOverOneKb = new byte[2 * 1024];
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "large.log", "text/plain", slightlyOverOneKb);
+
+        assertThrows(FileTooLargeException.class, () -> serviceWithSmallerLimit.analyze(file));
     }
 }

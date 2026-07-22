@@ -5,7 +5,9 @@ import com.hatice.loginsight.dto.LogAnalysisResult;
 import com.hatice.loginsight.exception.EmptyFileException;
 import com.hatice.loginsight.exception.FileTooLargeException;
 import com.hatice.loginsight.exception.UnsupportedFileTypeException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -20,8 +22,13 @@ import java.util.stream.Collectors;
 @Service
 public class LogAnalysisService {
 
-    private static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
     private static final List<String> ALLOWED_EXTENSIONS = List.of(".log", ".txt");
+
+    private final DataSize maxFileSize;
+
+    public LogAnalysisService(@Value("${app.log-analysis.max-file-size:10MB}") DataSize maxFileSize) {
+        this.maxFileSize = maxFileSize;
+    }
 
     public LogAnalysisResult analyze(MultipartFile file) {
         validate(file);
@@ -90,8 +97,9 @@ public class LogAnalysisService {
             throw new UnsupportedFileTypeException("Sadece .log ve .txt uzantılı dosyalar desteklenir");
         }
 
-        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-            throw new FileTooLargeException("Dosya boyutu izin verilen maksimum sınırı (5MB) aşıyor");
+        if (file.getSize() > maxFileSize.toBytes()) {
+            throw new FileTooLargeException(
+                    "Dosya boyutu izin verilen maksimum sınırı (" + maxFileSize.toMegabytes() + "MB) aşıyor");
         }
     }
 }
