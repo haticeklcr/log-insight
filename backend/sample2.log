@@ -1,0 +1,10 @@
+2026-01-01 09:00:00 INFO Server started successfully
+2026-01-01 09:00:05 INFO Listening on port 8080
+2026-01-01 09:01:12 WARN Slow database query detected
+2026-01-01 09:02:30 ERROR: Connection refused
+2026-01-01 09:02:45 ERROR: Connection refused
+2026-01-01 09:03:00 ERROR: Disk space low on /var/log
+2026-01-01 09:03:15 WARN Retry attempt 1 failed with an IOException
+2026-01-01 09:04:00 INFO Health check passed
+2026-01-01 09:05:00 INFO Request completed in 120ms
+2026-01-01 09:06:00 ERROR: Connection refused
