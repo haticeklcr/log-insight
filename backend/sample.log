@@ -1,0 +1,9 @@
+2026-07-21 10:00:01 INFO Application started successfully
+2026-07-21 10:00:05 INFO User login: hatice
+2026-07-21 10:00:12 WARN Slow response time detected: 3200ms
+2026-07-21 10:00:20 ERROR Connection refused: database unreachable
+2026-07-21 10:00:21 ERROR Connection refused: database unreachable
+2026-07-21 10:00:30 INFO Cache refreshed
+2026-07-21 10:00:45 ERROR Request timeout
+2026-07-21 10:01:00 ERROR NullPointerException at LogService.java:42
+
