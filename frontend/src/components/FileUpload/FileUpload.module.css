@@ -1,0 +1,97 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  border: 2px dashed #3a3a3a;
+  border-radius: 0.75rem;
+  background-color: #1a1a1a;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dropzoneActive {
+  border-color: #4f8cff;
+  background-color: #1e2430;
+}
+
+.dropzoneText {
+  margin: 0;
+  color: #a0a0a0;
+  font-size: 0.95rem;
+}
+
+.selectButton {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.selectButton:hover:not(:disabled) {
+  background-color: #333333;
+}
+
+.selectButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.fileInfo {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background-color: #1e1e1e;
+  border-radius: 0.5rem;
+  border: 1px solid #2a2a2a;
+  font-size: 0.9rem;
+}
+
+.fileName {
+  color: #f0f0f0;
+  font-weight: 500;
+}
+
+.fileSize {
+  color: #a0a0a0;
+}
+
+.validationError {
+  margin: 0;
+  color: #e74c3c;
+  font-size: 0.9rem;
+}
+
+.analyzeButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  background-color: #4f8cff;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.analyzeButton:hover:not(:disabled) {
+  background-color: #3d78e6;
+}
+
+.analyzeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

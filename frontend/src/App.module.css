@@ -1,0 +1,43 @@
+.app {
+  min-height: 100vh;
+  background-color: #121212;
+  color: #f0f0f0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.main {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.resultContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  color: #d0d0d0;
+  font-weight: 500;
+}
+
+.newAnalysisButton {
+  align-self: flex-start;
+  padding: 0.6rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.newAnalysisButton:hover {
+  background-color: #333333;
+}

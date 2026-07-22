@@ -1,0 +1,34 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background-color: #888888;
+}
+
+.container[data-status="up"] .dot {
+  background-color: #2ecc71;
+}
+
+.container[data-status="down"] .dot {
+  background-color: #e74c3c;
+}
+
+.container[data-status="checking"] .dot {
+  background-color: #f1c40f;
+}
+
+.label {
+  color: #d0d0d0;
+}
