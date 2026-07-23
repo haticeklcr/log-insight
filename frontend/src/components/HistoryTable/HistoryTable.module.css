@@ -1,0 +1,40 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1e1e1e;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.headerCell {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  background-color: #262626;
+  color: #d0d0d0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cell {
+  padding: 0.6rem 0.85rem;
+  border-top: 1px solid #2a2a2a;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+}
+
+.detailButton,
+.deleteButton {
+  padding: 0.3rem 0.7rem;
+  margin-right: 0.4rem;
+  border-radius: 0.4rem;
+  border: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.deleteButton {
+  border-color: #6b2b2b;
+  color: #ffb3b3;
+}
