@@ -47,6 +47,11 @@ public class GlobalExceptionHandler {
                 "İstek multipart/form-data formatında olmalı ve bir dosya içermeli", request);
     }
 
+    @ExceptionHandler(AnalysisNotFoundException.class)
+    public ResponseEntity<ApiError> handleAnalysisNotFound(AnalysisNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "ANALYSIS_NOT_FOUND", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(
