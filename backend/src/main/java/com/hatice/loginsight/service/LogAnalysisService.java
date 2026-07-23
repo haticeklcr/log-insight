@@ -2,11 +2,15 @@ package com.hatice.loginsight.service;
 
 import com.hatice.loginsight.dto.ErrorFrequency;
 import com.hatice.loginsight.dto.LogAnalysisResult;
+import com.hatice.loginsight.entity.FrequentErrorEntity;
+import com.hatice.loginsight.entity.LogAnalysisEntity;
 import com.hatice.loginsight.exception.EmptyFileException;
 import com.hatice.loginsight.exception.FileTooLargeException;
 import com.hatice.loginsight.exception.UnsupportedFileTypeException;
+import com.hatice.loginsight.repository.LogAnalysisRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,13 +30,19 @@ public class LogAnalysisService {
     private static final List<String> ALLOWED_EXTENSIONS = List.of(".log", ".txt");
 
     private final DataSize maxFileSize;
+    private final LogAnalysisRepository logAnalysisRepository;
 
-    public LogAnalysisService(@Value("${app.log-analysis.max-file-size:10MB}") DataSize maxFileSize) {
+    public LogAnalysisService(@Value("${app.log-analysis.max-file-size:10MB}") DataSize maxFileSize,
+                               LogAnalysisRepository logAnalysisRepository) {
         this.maxFileSize = maxFileSize;
+        this.logAnalysisRepository = logAnalysisRepository;
     }
 
+    @Transactional
     public LogAnalysisResult analyze(MultipartFile file) {
         validate(file);
+
+        long startTime = System.currentTimeMillis();
 
         int totalLines = 0;
         int infoCount = 0;
@@ -76,13 +87,33 @@ public class LogAnalysisService {
                 .map(entry -> new ErrorFrequency(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
 
+        long processingDurationMs = System.currentTimeMillis() - startTime;
+
+        LogAnalysisEntity entity = new LogAnalysisEntity();
+        entity.setFileName(file.getOriginalFilename());
+        entity.setFileSize(file.getSize());
+        entity.setTotalLines(totalLines);
+        entity.setInfoCount(infoCount);
+        entity.setWarningCount(warningCount);
+        entity.setErrorCount(errorCount);
+        entity.setExceptionCount(exceptionCount);
+        entity.setAnalyzedAt(Instant.now());
+        entity.setProcessingDurationMs(processingDurationMs);
+
+        for (ErrorFrequency errorFrequency : mostFrequentErrors) {
+            entity.addFrequentError(new FrequentErrorEntity(errorFrequency.getMessage(), errorFrequency.getCount()));
+        }
+
+        LogAnalysisEntity savedEntity = logAnalysisRepository.save(entity);
+
         LogAnalysisResult result = new LogAnalysisResult();
-        result.setFileName(file.getOriginalFilename());
-        result.setTotalLines(totalLines);
-        result.setInfoCount(infoCount);
-        result.setWarningCount(warningCount);
-        result.setErrorCount(errorCount);
-        result.setExceptionCount(exceptionCount);
+        result.setId(savedEntity.getId());
+        result.setFileName(savedEntity.getFileName());
+        result.setTotalLines(savedEntity.getTotalLines());
+        result.setInfoCount(savedEntity.getInfoCount());
+        result.setWarningCount(savedEntity.getWarningCount());
+        result.setErrorCount(savedEntity.getErrorCount());
+        result.setExceptionCount(savedEntity.getExceptionCount());
         result.setMostFrequentErrors(mostFrequentErrors);
         return result;
     }

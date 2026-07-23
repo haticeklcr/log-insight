@@ -4,6 +4,7 @@ import java.util.List;
 
 public class LogAnalysisResult {
 
+    private Long id;
     private String fileName;
     private int totalLines;
     private int infoCount;
@@ -13,6 +14,14 @@ public class LogAnalysisResult {
     private List<ErrorFrequency> mostFrequentErrors;
 
     public LogAnalysisResult() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getFileName() {
