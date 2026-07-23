@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-log-analysis-table
+      author: hatice
+      changes:
+        - createTable:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_size
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_lines
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: info_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: warning_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: error_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: exception_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: analyzed_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processing_duration_ms
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: log_analysis

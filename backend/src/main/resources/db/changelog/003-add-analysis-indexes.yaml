@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-analysis-indexes
+      author: hatice
+      changes:
+        - createIndex:
+            indexName: idx_log_analysis_analyzed_at
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: analyzed_at
+        - createIndex:
+            indexName: idx_log_analysis_file_name
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: file_name
+        - createIndex:
+            indexName: idx_log_analysis_error_count
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: error_count
+      rollback:
+        - dropIndex:
+            indexName: idx_log_analysis_analyzed_at
+            tableName: log_analysis
+        - dropIndex:
+            indexName: idx_log_analysis_file_name
+            tableName: log_analysis
+        - dropIndex:
+            indexName: idx_log_analysis_error_count
+            tableName: log_analysis
