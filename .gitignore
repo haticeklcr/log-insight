@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+.env
+app.jar
+app2.jar
+backend-debug.log
+full-backend.log
