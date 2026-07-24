@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-add-job-analysis-relation
+      author: hatice
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: analysis_job
+            baseColumnNames: analysis_id
+            referencedTableName: log_analysis
+            referencedColumnNames: id
+            constraintName: fk_analysis_job_analysis
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: analysis_job
+            constraintName: fk_analysis_job_analysis

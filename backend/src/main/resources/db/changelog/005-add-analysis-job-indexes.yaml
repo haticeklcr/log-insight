@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-analysis-job-indexes
+      author: hatice
+      changes:
+        - createIndex:
+            indexName: idx_analysis_job_status
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_analysis_job_created_at
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: created_at
+      rollback:
+        - dropIndex:
+            indexName: idx_analysis_job_status
+            tableName: analysis_job
+        - dropIndex:
+            indexName: idx_analysis_job_created_at
+            tableName: analysis_job

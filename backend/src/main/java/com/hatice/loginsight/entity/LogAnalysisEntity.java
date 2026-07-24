@@ -48,6 +48,9 @@ public class LogAnalysisEntity {
     @Column(name = "processing_duration_ms", nullable = false)
     private long processingDurationMs;
 
+    @Column(name = "analysis_name")
+    private String analysisName;
+
     @OneToMany(mappedBy = "logAnalysis", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FrequentErrorEntity> frequentErrors = new ArrayList<>();
 
@@ -145,5 +148,13 @@ public class LogAnalysisEntity {
 
     public void setFrequentErrors(List<FrequentErrorEntity> frequentErrors) {
         this.frequentErrors = frequentErrors;
+    }
+
+    public String getAnalysisName() {
+        return analysisName;
+    }
+
+    public void setAnalysisName(String analysisName) {
+        this.analysisName = analysisName;
     }
 }

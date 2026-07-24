@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-analysis-name-to-log-analysis
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: analysis_name
+                  type: VARCHAR(100)
+      rollback:
+        - dropColumn:
+            tableName: log_analysis
+            columnName: analysis_name

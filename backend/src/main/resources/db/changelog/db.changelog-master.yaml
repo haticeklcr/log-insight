@@ -5,3 +5,11 @@ databaseChangeLog:
       file: db/changelog/002-create-frequent-error-table.yaml
   - include:
       file: db/changelog/003-add-analysis-indexes.yaml
+  - include:
+      file: db/changelog/004-create-analysis-job-table.yaml
+  - include:
+      file: db/changelog/005-add-analysis-job-indexes.yaml
+  - include:
+      file: db/changelog/006-add-job-analysis-relation.yaml
+  - include:
+      file: db/changelog/007-add-analysis-name-to-log-analysis.yaml
