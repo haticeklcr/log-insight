@@ -22,7 +22,8 @@ import com.hatice.loginsight.repository.LogAnalysisRepository;
 class LogAnalysisServiceTest {
 
     private final LogAnalysisRepository logAnalysisRepository = mock(LogAnalysisRepository.class);
-    private final LogAnalysisService service = new LogAnalysisService(DataSize.ofMegabytes(1), logAnalysisRepository);
+    private final LogFileValidator logFileValidator = new LogFileValidator(DataSize.ofMegabytes(1));
+    private final LogAnalysisService service = new LogAnalysisService(logAnalysisRepository, logFileValidator);
 
     {
         when(logAnalysisRepository.save(any(LogAnalysisEntity.class))).thenAnswer(invocation -> {
@@ -111,8 +112,9 @@ class LogAnalysisServiceTest {
 
     @Test
     void appliesDifferentConfiguredSizeLimitWhenInjectedDifferently() {
+        LogFileValidator smallerLimitValidator = new LogFileValidator(DataSize.ofKilobytes(1));
         LogAnalysisService serviceWithSmallerLimit =
-                new LogAnalysisService(DataSize.ofKilobytes(1), logAnalysisRepository);
+                new LogAnalysisService(logAnalysisRepository, smallerLimitValidator);
         byte[] slightlyOverOneKb = new byte[2 * 1024];
         MockMultipartFile file = new MockMultipartFile(
                 "file", "large.log", "text/plain", slightlyOverOneKb);

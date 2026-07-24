@@ -52,6 +52,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "ANALYSIS_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidAnalysisNameException.class)
+    public ResponseEntity<ApiError> handleInvalidAnalysisName(InvalidAnalysisNameException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_ANALYSIS_NAME", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(
