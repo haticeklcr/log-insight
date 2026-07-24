@@ -12,11 +12,25 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.hatice.loginsight.entity.LogAnalysisEntity;
+import com.hatice.loginsight.repository.LogAnalysisRepository;
 
 class LogAnalysisServiceTest {
 
-    private final LogAnalysisService service = new LogAnalysisService(DataSize.ofMegabytes(1));
+    private final LogAnalysisRepository logAnalysisRepository = mock(LogAnalysisRepository.class);
+    private final LogAnalysisService service = new LogAnalysisService(DataSize.ofMegabytes(1), logAnalysisRepository);
 
+    {
+        when(logAnalysisRepository.save(any(LogAnalysisEntity.class))).thenAnswer(invocation -> {
+            LogAnalysisEntity entity = invocation.getArgument(0);
+            entity.setId(1L);
+            return entity;
+        });
+    }
     private static final String SAMPLE_LOG_CONTENT =
             "2026-01-01 10:00:00 INFO Application started\n" +
             "2026-01-01 10:00:01 INFO Loading configuration\n" +
@@ -97,7 +111,8 @@ class LogAnalysisServiceTest {
 
     @Test
     void appliesDifferentConfiguredSizeLimitWhenInjectedDifferently() {
-        LogAnalysisService serviceWithSmallerLimit = new LogAnalysisService(DataSize.ofKilobytes(1));
+        LogAnalysisService serviceWithSmallerLimit =
+                new LogAnalysisService(DataSize.ofKilobytes(1), logAnalysisRepository);
         byte[] slightlyOverOneKb = new byte[2 * 1024];
         MockMultipartFile file = new MockMultipartFile(
                 "file", "large.log", "text/plain", slightlyOverOneKb);
