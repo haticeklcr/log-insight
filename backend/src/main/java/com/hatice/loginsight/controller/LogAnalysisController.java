@@ -2,7 +2,6 @@ package com.hatice.loginsight.controller;
 
 import com.hatice.loginsight.dto.LogAnalysisResult;
 import com.hatice.loginsight.service.LogAnalysisService;
-import com.hatice.loginsight.service.LogAnalysisService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
