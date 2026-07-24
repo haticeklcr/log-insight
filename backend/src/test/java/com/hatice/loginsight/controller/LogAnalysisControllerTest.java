@@ -1,5 +1,6 @@
 package com.hatice.loginsight.controller;
 
+import com.hatice.loginsight.AbstractIntegrationTest;
 import com.hatice.loginsight.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-class LogAnalysisControllerTest {
+class LogAnalysisControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     private LogAnalysisController logAnalysisController;
