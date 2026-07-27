@@ -1,9 +1,14 @@
 package com.hatice.loginsight.controller;
 
 import com.hatice.loginsight.dto.AnalysisJobDetailDto;
+import com.hatice.loginsight.dto.AnalysisJobSummaryDto;
 import com.hatice.loginsight.dto.CreateAnalysisJobResponse;
+import com.hatice.loginsight.dto.PagedResponse;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
+import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.service.AnalysisJobService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,6 +42,19 @@ public class AnalysisJobController {
         return toDetailDto(analysisJobService.getJob(id));
     }
 
+    @GetMapping
+    public PagedResponse<AnalysisJobSummaryDto> listJobs(
+            @RequestParam(required = false) String analysisName,
+            @RequestParam(required = false) String fileName,
+            @RequestParam(required = false) JobStatus status,
+            Pageable pageable) {
+        Page<AnalysisJobEntity> page = analysisJobService.listJobs(analysisName, fileName, status, pageable);
+        Page<AnalysisJobSummaryDto> dtoPage = page.map(this::toSummaryDto);
+        return new PagedResponse<>(
+                dtoPage.getContent(), dtoPage.getNumber(), dtoPage.getSize(),
+                dtoPage.getTotalElements(), dtoPage.getTotalPages(), dtoPage.isFirst(), dtoPage.isLast());
+    }
+
     @PostMapping("/{id}/cancel")
     public AnalysisJobDetailDto cancelJob(@PathVariable UUID id) {
         return toDetailDto(analysisJobService.cancelJob(id));
@@ -61,6 +79,20 @@ public class AnalysisJobController {
         dto.setCompletedAt(job.getCompletedAt());
         dto.setErrorCode(job.getErrorCode());
         dto.setAnalysisId(job.getAnalysisId());
+        return dto;
+    }
+
+    private AnalysisJobSummaryDto toSummaryDto(AnalysisJobEntity job) {
+        AnalysisJobSummaryDto dto = new AnalysisJobSummaryDto();
+        dto.setJobId(job.getId());
+        dto.setAnalysisName(job.getAnalysisName());
+        dto.setFileName(job.getFileName());
+        dto.setStatus(job.getStatus());
+        dto.setProgress(job.getProgress());
+        dto.setRetryCount(job.getRetryCount());
+        dto.setCreatedAt(job.getCreatedAt());
+        dto.setStartedAt(job.getStartedAt());
+        dto.setCompletedAt(job.getCompletedAt());
         return dto;
     }
 }

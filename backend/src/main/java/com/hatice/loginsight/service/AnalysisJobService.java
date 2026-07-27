@@ -7,6 +7,9 @@ import com.hatice.loginsight.exception.JobNotFoundException;
 import com.hatice.loginsight.exception.JobRetryLimitExceededException;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -123,6 +126,14 @@ public class AnalysisJobService {
         analysisJobRunner.runAnalysis(job.getId());
 
         return job;
+    }
+
+    public Page<AnalysisJobEntity> listJobs(String analysisName, String fileName, JobStatus status, Pageable pageable) {
+        Specification<AnalysisJobEntity> spec = Specification
+                .where(AnalysisJobSpecifications.hasAnalysisNameContaining(analysisName))
+                .and(AnalysisJobSpecifications.hasFileNameContaining(fileName))
+                .and(AnalysisJobSpecifications.hasStatus(status));
+        return analysisJobRepository.findAll(spec, pageable);
     }
 
     private AnalysisJobEntity findJobOrThrow(UUID jobId) {
