@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/006-add-job-analysis-relation.yaml
   - include:
       file: db/changelog/007-add-analysis-name-to-log-analysis.yaml
+  - include:
+      file: db/changelog/008-fix-analysis-job-fk-on-delete.yaml

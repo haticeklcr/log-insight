@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-fix-analysis-job-fk-on-delete
+      author: hatice
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: analysis_job
+            constraintName: fk_analysis_job_analysis
+        - addForeignKeyConstraint:
+            baseTableName: analysis_job
+            baseColumnNames: analysis_id
+            referencedTableName: log_analysis
+            referencedColumnNames: id
+            constraintName: fk_analysis_job_analysis
+            onDelete: SET NULL
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: analysis_job
+            constraintName: fk_analysis_job_analysis
+        - addForeignKeyConstraint:
+            baseTableName: analysis_job
+            baseColumnNames: analysis_id
+            referencedTableName: log_analysis
+            referencedColumnNames: id
+            constraintName: fk_analysis_job_analysis
