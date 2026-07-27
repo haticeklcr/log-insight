@@ -6,7 +6,10 @@ import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.entity.LogAnalysisEntity;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
 import com.hatice.loginsight.repository.LogAnalysisRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +27,8 @@ import java.util.UUID;
 
 @Service
 public class AnalysisJobRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisJobRunner.class);
 
     private final AnalysisJobRepository analysisJobRepository;
     private final LogAnalysisRepository logAnalysisRepository;
@@ -93,14 +98,29 @@ public class AnalysisJobRunner {
                     }
 
                     if (totalLines % progressInterval == 0) {
-                        job = analysisJobRepository.findById(jobId).orElseThrow();
-                        if (job.isCancelRequested()) {
-                            handleCancellation(job);
-                            return;
+                        boolean checkpointSaved = false;
+                        for (int attempt = 1; attempt <= 5 && !checkpointSaved; attempt++) {
+                            try {
+                                job = analysisJobRepository.findById(jobId).orElseThrow();
+                                if (job.isCancelRequested()) {
+                                    handleCancellation(job);
+                                    return;
+                                }
+                                int progress = totalBytes == 0 ? 100
+                                        : (int) Math.min(99, (countingStream.getBytesRead() * 100) / totalBytes);
+                                job.setProgress(progress);
+                                job = analysisJobRepository.save(job);
+                                checkpointSaved = true;
+                            } catch (ObjectOptimisticLockingFailureException e) {
+                                // cancelJob() tam bu anda aynı satırı güncellemiş olabilir
+                                // (cancel_requested bayrağını koyarken). Satırı yeniden okuyup
+                                // tekrar deniyoruz — bir sonraki denemede cancelRequested=true
+                                // görüp düzgünce CANCELLED'a geçeceğiz.
+                                if (attempt == 5) {
+                                    throw e;
+                                }
+                            }
                         }
-                        int progress = totalBytes == 0 ? 100 : (int) Math.min(99, (countingStream.getBytesRead() * 100) / totalBytes);
-                        job.setProgress(progress);
-                        job = analysisJobRepository.save(job);
                     }
                 }
             }

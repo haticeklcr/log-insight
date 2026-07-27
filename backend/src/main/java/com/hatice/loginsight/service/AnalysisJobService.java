@@ -7,9 +7,11 @@ import com.hatice.loginsight.exception.JobNotFoundException;
 import com.hatice.loginsight.exception.JobRetryLimitExceededException;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,19 +30,22 @@ public class AnalysisJobService {
     private final AnalysisJobRunner analysisJobRunner;
     private final JobStateMachine jobStateMachine;
     private final int maxRetry;
+    private final AnalysisJobService self;
 
     public AnalysisJobService(AnalysisJobRepository analysisJobRepository,
                                LogFileValidator logFileValidator,
                                TempFileStorageService tempFileStorageService,
                                AnalysisJobRunner analysisJobRunner,
                                JobStateMachine jobStateMachine,
-                               @Value("${app.analysis-job.max-retry}") int maxRetry) {
+                               @Value("${app.analysis-job.max-retry}") int maxRetry,
+                               @Lazy AnalysisJobService self) {
         this.analysisJobRepository = analysisJobRepository;
         this.logFileValidator = logFileValidator;
         this.tempFileStorageService = tempFileStorageService;
         this.analysisJobRunner = analysisJobRunner;
         this.jobStateMachine = jobStateMachine;
         this.maxRetry = maxRetry;
+        this.self = self;
     }
 
     public AnalysisJobEntity createJob(MultipartFile file, String analysisName) {
@@ -85,8 +90,26 @@ public class AnalysisJobService {
         return findJobOrThrow(jobId);
     }
 
-    @Transactional
     public AnalysisJobEntity cancelJob(UUID jobId) {
+        int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return self.doCancelJob(jobId);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                // Arka plandaki AnalysisJobRunner tam bu anda aynı satırı (örn. progress
+                // güncellemesi için) güncellemiş olabilir. self.doCancelJob çağrısı Spring
+                // proxy'si üzerinden geçtiği için her deneme KENDİ, taze transaction'ında
+                // çalışır — bir önceki denemenin "kirlenmiş" oturumunu miras almaz.
+                if (attempt == maxAttempts) {
+                    throw e;
+                }
+            }
+        }
+        throw new IllegalStateException("Beklenmeyen durum: cancelJob yeniden deneme döngüsü tamamlanamadı");
+    }
+
+    @Transactional
+    public AnalysisJobEntity doCancelJob(UUID jobId) {
         AnalysisJobEntity job = findJobOrThrow(jobId);
         jobStateMachine.assertCanBeCancelled(job.getStatus());
 
