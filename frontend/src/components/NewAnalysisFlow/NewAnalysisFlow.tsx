@@ -1,30 +1,33 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./NewAnalysisFlow.module.css";
 import FileUpload from "../FileUpload/FileUpload";
 import ErrorAlert from "../ErrorAlert/ErrorAlert";
 import LoadingIndicator from "../LoadingIndicator/LoadingIndicator";
 import { createAnalysisJob } from "../../services/analysisJobApi";
-import { LogAnalysisApiError } from "../../services/logAnalysisApi";
+import { translateApiError } from "../../utils/apiErrorMessage";
 
 interface NewAnalysisFlowProps {
   onJobCreated: (jobId: string) => void;
 }
 
-function validateAnalysisName(name: string): string | null {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) {
-    return "Analiz adı zorunludur";
-  }
-  if (trimmed.length < 3) {
-    return "Analiz adı en az 3 karakter olmalıdır";
-  }
-  if (trimmed.length > 100) {
-    return "Analiz adı en fazla 100 karakter olabilir";
-  }
-  return null;
-}
-
 export default function NewAnalysisFlow({ onJobCreated }: NewAnalysisFlowProps) {
+  const { t } = useTranslation();
+
+  function validateAnalysisName(name: string): string | null {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      return t("newAnalysis.nameRequired");
+    }
+    if (trimmed.length < 3) {
+      return t("newAnalysis.nameTooShort");
+    }
+    if (trimmed.length > 100) {
+      return t("newAnalysis.nameTooLong");
+    }
+    return null;
+  }
+
   const [analysisName, setAnalysisName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,12 +46,8 @@ export default function NewAnalysisFlow({ onJobCreated }: NewAnalysisFlowProps) 
     try {
       const response = await createAnalysisJob(file, analysisName.trim());
       onJobCreated(response.jobId);
-    } catch (error) {
-      if (error instanceof LogAnalysisApiError) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin.");
-      }
+    }  catch (error) {
+      setErrorMessage(translateApiError(error, t, "newAnalysis.backendUnreachable"));
     } finally {
       setIsSubmitting(false);
     }
@@ -58,7 +57,7 @@ export default function NewAnalysisFlow({ onJobCreated }: NewAnalysisFlowProps) 
     <div className={styles.container}>
       <div className={styles.nameField}>
         <label htmlFor="analysis-name" className={styles.label}>
-          Analiz Adı
+          {t("newAnalysis.nameLabel")}
         </label>
         <input
           id="analysis-name"
@@ -69,7 +68,7 @@ export default function NewAnalysisFlow({ onJobCreated }: NewAnalysisFlowProps) 
             setAnalysisName(event.target.value);
             setNameError(null);
           }}
-          placeholder="Örn. Ödeme Servisi Gece Logları"
+          placeholder={t("newAnalysis.namePlaceholder")}
           disabled={isSubmitting}
           data-testid="analysis-name-input"
         />

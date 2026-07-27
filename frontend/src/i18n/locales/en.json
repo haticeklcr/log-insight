@@ -1,0 +1,155 @@
+{
+  "header": {
+    "title": "Log Insight",
+    "subtitle": "Upload your application logs and instantly see errors and recurring issues."
+  },
+  "nav": {
+    "newAnalysis": "New Analysis",
+    "jobs": "Analysis Jobs",
+    "history": "Analysis History"
+  },
+  "language": {
+    "turkish": "Turkish",
+    "english": "English"
+  },
+  "fileUpload": {
+    "dropzoneText": "Drag and drop your file here or select one",
+    "selectButton": "Select File",
+    "analyzeButton": "Analyze",
+    "analyzing": "Analyzing...",
+    "unsupportedType": "Only .log and .txt files can be selected",
+    "noFileSelected": "Please select a file first"
+  },
+  "newAnalysis": {
+    "nameLabel": "Analysis Name",
+    "namePlaceholder": "E.g. Payment Service Night Logs",
+    "nameRequired": "Analysis name is required",
+    "nameTooShort": "Analysis name must be at least 3 characters",
+    "nameTooLong": "Analysis name must not exceed 100 characters",
+    "backendUnreachable": "Could not reach the backend service. Please try again later."
+  },
+  "jobStatus": {
+    "PENDING": "Pending",
+    "RUNNING": "Running",
+    "SUCCEEDED": "Succeeded",
+    "FAILED": "Failed",
+    "CANCELLED": "Cancelled"
+  },
+  "jobFilters": {
+    "analysisNamePlaceholder": "Search by analysis name",
+    "fileNamePlaceholder": "Search by file name",
+    "allStatuses": "All Statuses",
+    "apply": "Apply"
+  },
+  "jobsTable": {
+    "analysisName": "Analysis Name",
+    "fileName": "File Name",
+    "status": "Status",
+    "progress": "Progress",
+    "createdAt": "Created",
+    "startedAt": "Started",
+    "completedAt": "Completed",
+    "retryCount": "Retry",
+    "actions": "Actions",
+    "detail": "Detail",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "result": "Result"
+  },
+  "jobsListView": {
+    "empty": "No analysis jobs yet.",
+    "loadError": "An error occurred while loading the job list. The backend service may be unreachable.",
+    "cancelError": "An error occurred while cancelling the job",
+    "retryError": "An error occurred while retrying the job"
+  },
+  "jobDetail": {
+    "back": "← Back",
+    "jobId": "Job ID",
+    "fileName": "File Name",
+    "fileSize": "File Size",
+    "createdAt": "Created At",
+    "startedAt": "Started At",
+    "completedAt": "Completed At",
+    "elapsed": "Elapsed Time",
+    "retryCount": "Retry Count",
+    "bytes": "bytes",
+    "notAvailable": "—",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "viewResult": "View Result",
+    "seconds": "s",
+    "minutes": "min"
+  },
+  "errors": {
+    "APPLICATION_RESTARTED_DURING_ANALYSIS": "This analysis was interrupted because the application restarted.",
+    "ANALYSIS_IO_ERROR": "An error occurred while reading the log file.",
+    "ANALYSIS_UNEXPECTED_ERROR": "An unexpected error occurred during analysis.",
+    "EMPTY_FILE": "The uploaded file is empty",
+    "INVALID_LOG_FILE": "Only .log and .txt files are supported",
+    "FILE_TOO_LARGE": "The file size exceeds the allowed maximum limit",
+    "INVALID_REQUEST": "The request is invalid. Please make sure you selected a file.",
+    "ANALYSIS_NOT_FOUND": "Analysis record not found",
+    "INVALID_ANALYSIS_NAME": "The analysis name is invalid",
+    "JOB_NOT_FOUND": "Job not found",
+    "INVALID_JOB_STATE": "This job cannot perform this action in its current state",
+    "RETRY_LIMIT_EXCEEDED": "Maximum retry limit reached",
+    "generic": "The analysis failed."
+  },
+  "polling": {
+    "unreachable": "Could not reach the backend service. The job status cannot be updated."
+  },
+  "common": {
+    "loading": "Analyzing file...",
+    "totalLines": "Total Lines",
+    "info": "INFO",
+    "warning": "WARN",
+    "error": "ERROR",
+    "exception": "Exception"
+  },
+  "historyView": {
+    "loadError": "An error occurred while loading the analysis history. The backend service may be unreachable.",
+    "empty": "No analysis history yet.",
+    "deleteSuccess": "The analysis record was deleted successfully",
+    "deleteError": "An error occurred while deleting the analysis record"
+  },
+  "searchFilterBar": {
+    "fileNamePlaceholder": "Search by file name",
+    "minErrorPlaceholder": "Min. ERROR count",
+    "apply": "Apply"
+  },
+  "historyTable": {
+    "fileName": "File Name",
+    "analyzedAt": "Analysis Date",
+    "fileSize": "Size",
+    "totalLines": "Total Lines",
+    "error": "ERROR",
+    "exception": "Exception",
+    "duration": "Duration",
+    "detail": "Detail",
+    "delete": "Delete"
+  },
+  "pagination": {
+    "previous": "Previous Page",
+    "next": "Next Page",
+    "pageInfo": "Page {{current}} / {{total}}"
+  },
+  "deleteConfirm": {
+    "message": "Are you sure you want to delete the analysis record \"{{fileName}}\"?",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "analysisDetail": {
+    "back": "Back to History",
+    "mostFrequentErrors": "Most Frequent Errors"
+  },
+  "frequentErrorsTable": {
+    "empty": "No recurring error messages found.",
+    "message": "Error Message",
+    "count": "Occurrence Count"
+  },
+  "backendStatus": {
+    "checking": "Checking...",
+    "up": "Service is running",
+    "down": "Service unreachable"
+  }
+}

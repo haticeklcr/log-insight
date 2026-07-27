@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./JobsListView.module.css";
 import JobsTable from "../JobsTable/JobsTable";
 import JobFilterBar from "../JobFilterBar/JobFilterBar";
@@ -6,6 +7,7 @@ import Pagination from "../Pagination/Pagination";
 import LoadingIndicator from "../LoadingIndicator/LoadingIndicator";
 import ErrorAlert from "../ErrorAlert/ErrorAlert";
 import { fetchAnalysisJobs, cancelAnalysisJob, retryAnalysisJob } from "../../services/analysisJobApi";
+import { translateApiError } from "../../utils/apiErrorMessage";
 import type { AnalysisJobSummary, JobStatus } from "../../types/analysisJob";
 import type { PagedResponse } from "../../types/analysisHistory";
 
@@ -16,6 +18,7 @@ interface JobsListViewProps {
 const PAGE_SIZE = 10;
 
 export default function JobsListView({ onViewDetail }: JobsListViewProps) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [analysisNameFilter, setAnalysisNameFilter] = useState("");
   const [fileNameFilter, setFileNameFilter] = useState("");
@@ -37,11 +40,11 @@ export default function JobsListView({ onViewDetail }: JobsListViewProps) {
       });
       setData(response);
     } catch {
-      setErrorMessage("İş listesi yüklenirken bir hata oluştu. Backend servisine ulaşılamıyor olabilir.");
+      setErrorMessage(t("jobsListView.loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, [page, analysisNameFilter, fileNameFilter, statusFilter]);
+  }, [page, analysisNameFilter, fileNameFilter, statusFilter, t]);
 
   useEffect(() => {
     loadData();
@@ -58,8 +61,8 @@ export default function JobsListView({ onViewDetail }: JobsListViewProps) {
     try {
       await cancelAnalysisJob(jobId);
       await loadData();
-    } catch {
-      setErrorMessage("İş iptal edilirken bir hata oluştu");
+    } catch (error) {
+      setErrorMessage(translateApiError(error, t, "jobsListView.cancelError"));
     }
   }
 
@@ -67,8 +70,8 @@ export default function JobsListView({ onViewDetail }: JobsListViewProps) {
     try {
       await retryAnalysisJob(jobId);
       await loadData();
-    } catch {
-      setErrorMessage("İş yeniden başlatılırken bir hata oluştu");
+    } catch (error) {
+      setErrorMessage(translateApiError(error, t, "jobsListView.retryError"));
     }
   }
 
@@ -80,7 +83,7 @@ export default function JobsListView({ onViewDetail }: JobsListViewProps) {
       {errorMessage && <ErrorAlert message={errorMessage} />}
 
       {!isLoading && !errorMessage && data && data.content.length === 0 && (
-        <p className={styles.empty}>Henüz analiz işi bulunmuyor.</p>
+        <p className={styles.empty}>{t("jobsListView.empty")}</p>
       )}
 
       {!isLoading && !errorMessage && data && data.content.length > 0 && (

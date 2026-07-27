@@ -1,16 +1,21 @@
+import { useTranslation } from "react-i18next";
 import styles from "./Header.module.css";
 import BackendStatus from "../BackendStatus/BackendStatus";
+import LanguageSwitcher from "../LanguageSwitcher/LanguageSwitcher";
 
 export default function Header() {
+  const { t } = useTranslation();
+
   return (
     <header className={styles.header}>
       <div className={styles.titleGroup}>
-        <h1 className={styles.title}>Log Insight</h1>
-        <p className={styles.subtitle}>
-          Uygulama loglarınızı yükleyin, hataları ve tekrar eden sorunları anında görün.
-        </p>
+        <h1 className={styles.title}>{t("header.title")}</h1>
+        <p className={styles.subtitle}>{t("header.subtitle")}</p>
       </div>
-      <BackendStatus />
+      <div className={styles.rightGroup}>
+        <BackendStatus />
+        <LanguageSwitcher />
+      </div>
     </header>
   );
 }

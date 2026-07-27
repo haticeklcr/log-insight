@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./BackendStatus.module.css";
 import { checkBackendHealth } from "../../services/logAnalysisApi";
 
 type Status = "checking" | "up" | "down";
 
 export default function BackendStatus() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<Status>("checking");
 
   useEffect(() => {
@@ -22,7 +24,11 @@ export default function BackendStatus() {
   }, []);
 
   const label =
-    status === "checking" ? "Kontrol ediliyor..." : status === "up" ? "Servis çalışıyor" : "Servise ulaşılamıyor";
+    status === "checking"
+      ? t("backendStatus.checking")
+      : status === "up"
+        ? t("backendStatus.up")
+        : t("backendStatus.down");
 
   return (
     <div className={styles.container} data-status={status}>

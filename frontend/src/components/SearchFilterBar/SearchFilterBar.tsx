@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./SearchFilterBar.module.css";
 
 interface SearchFilterBarProps {
@@ -7,6 +8,7 @@ interface SearchFilterBarProps {
 }
 
 export default function SearchFilterBar({ onApply }: SearchFilterBarProps) {
+  const { t } = useTranslation();
   const [fileName, setFileName] = useState("");
   const [minErrorCount, setMinErrorCount] = useState("");
 
@@ -19,7 +21,7 @@ export default function SearchFilterBar({ onApply }: SearchFilterBarProps) {
     <form className={styles.form} onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Dosya adına göre ara"
+        placeholder={t("searchFilterBar.fileNamePlaceholder")}
         value={fileName}
         onChange={(e) => setFileName(e.target.value)}
         className={styles.input}
@@ -27,13 +29,13 @@ export default function SearchFilterBar({ onApply }: SearchFilterBarProps) {
       <input
         type="number"
         min={0}
-        placeholder="Min. ERROR sayısı"
+        placeholder={t("searchFilterBar.minErrorPlaceholder")}
         value={minErrorCount}
         onChange={(e) => setMinErrorCount(e.target.value)}
         className={styles.input}
       />
       <button type="submit" className={styles.button}>
-        Uygula
+        {t("searchFilterBar.apply")}
       </button>
     </form>
   );

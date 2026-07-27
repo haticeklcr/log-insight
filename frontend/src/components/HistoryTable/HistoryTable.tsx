@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./HistoryTable.module.css";
 import type { AnalysisSummary } from "../../types/analysisHistory";
 import { formatFileSize, formatDateTime, formatDuration } from "../../utils/format";
@@ -9,17 +10,18 @@ interface HistoryTableProps {
 }
 
 export default function HistoryTable({ analyses, onViewDetail, onDelete }: HistoryTableProps) {
+  const { t } = useTranslation();
   return (
     <table className={styles.table}>
       <thead>
         <tr>
-          <th className={styles.headerCell}>Dosya Adı</th>
-          <th className={styles.headerCell}>Analiz Tarihi</th>
-          <th className={styles.headerCell}>Boyut</th>
-          <th className={styles.headerCell}>Toplam Satır</th>
-          <th className={styles.headerCell}>ERROR</th>
-          <th className={styles.headerCell}>Exception</th>
-          <th className={styles.headerCell}>Süre</th>
+          <th className={styles.headerCell}>{t("historyTable.fileName")}</th>
+          <th className={styles.headerCell}>{t("historyTable.analyzedAt")}</th>
+          <th className={styles.headerCell}>{t("historyTable.fileSize")}</th>
+          <th className={styles.headerCell}>{t("historyTable.totalLines")}</th>
+          <th className={styles.headerCell}>{t("historyTable.error")}</th>
+          <th className={styles.headerCell}>{t("historyTable.exception")}</th>
+          <th className={styles.headerCell}>{t("historyTable.duration")}</th>
           <th className={styles.headerCell}></th>
         </tr>
       </thead>
@@ -35,10 +37,10 @@ export default function HistoryTable({ analyses, onViewDetail, onDelete }: Histo
             <td className={styles.cell}>{formatDuration(analysis.processingDurationMs)}</td>
             <td className={styles.cell}>
               <button type="button" className={styles.detailButton} onClick={() => onViewDetail(analysis.id)}>
-                Detay
+                {t("historyTable.detail")}
               </button>
               <button type="button" className={styles.deleteButton} onClick={() => onDelete(analysis)}>
-                Sil
+                {t("historyTable.delete")}
               </button>
             </td>
           </tr>

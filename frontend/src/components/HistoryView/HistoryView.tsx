@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./HistoryView.module.css";
 import HistoryTable from "../HistoryTable/HistoryTable";
 import Pagination from "../Pagination/Pagination";
@@ -16,6 +17,7 @@ interface HistoryViewProps {
 const PAGE_SIZE = 10;
 
 export default function HistoryView({ onViewDetail }: HistoryViewProps) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [fileNameFilter, setFileNameFilter] = useState("");
   const [minErrorCountFilter, setMinErrorCountFilter] = useState<number | undefined>(undefined);
@@ -37,11 +39,11 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
       });
       setData(response);
     } catch {
-      setErrorMessage("Analiz geçmişi yüklenirken bir hata oluştu. Backend servisine ulaşılamıyor olabilir.");
+      setErrorMessage(t("historyView.loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, [page, fileNameFilter, minErrorCountFilter]);
+  }, [page, fileNameFilter, minErrorCountFilter, t]);
 
   useEffect(() => {
     loadData();
@@ -60,10 +62,10 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
     try {
       await deleteAnalysis(pendingDelete.id);
       setPendingDelete(null);
-      setSuccessMessage("Analiz kaydı başarıyla silindi");
+      setSuccessMessage(t("historyView.deleteSuccess"));
       await loadData();
     } catch {
-      setErrorMessage("Analiz kaydı silinirken bir hata oluştu");
+      setErrorMessage(t("historyView.deleteError"));
       setPendingDelete(null);
     }
   }
@@ -77,7 +79,7 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
       {errorMessage && <ErrorAlert message={errorMessage} />}
 
       {!isLoading && !errorMessage && data && data.content.length === 0 && (
-        <p className={styles.empty}>Henüz analiz geçmişi bulunmuyor.</p>
+        <p className={styles.empty}>{t("historyView.empty")}</p>
       )}
 
       {!isLoading && !errorMessage && data && data.content.length > 0 && (

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./Pagination.module.css";
 
 interface PaginationProps {
@@ -9,16 +10,17 @@ interface PaginationProps {
 }
 
 export default function Pagination({ page, totalPages, first, last, onPageChange }: PaginationProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.container}>
       <button type="button" onClick={() => onPageChange(page - 1)} disabled={first} className={styles.button}>
-        Önceki Sayfa
+        {t("pagination.previous")}
       </button>
       <span className={styles.info}>
-        Sayfa {page + 1} / {Math.max(totalPages, 1)}
+        {t("pagination.pageInfo", { current: page + 1, total: Math.max(totalPages, 1) })}
       </span>
       <button type="button" onClick={() => onPageChange(page + 1)} disabled={last} className={styles.button}>
-        Sonraki Sayfa
+        {t("pagination.next")}
       </button>
     </div>
   );

@@ -1,0 +1,155 @@
+{
+  "header": {
+    "title": "Log Insight",
+    "subtitle": "Uygulama loglarınızı yükleyin, hataları ve tekrar eden sorunları anında görün."
+  },
+  "nav": {
+    "newAnalysis": "Yeni Analiz",
+    "jobs": "Analiz İşleri",
+    "history": "Analiz Geçmişi"
+  },
+  "language": {
+    "turkish": "Türkçe",
+    "english": "İngilizce"
+  },
+  "fileUpload": {
+    "dropzoneText": "Dosyayı buraya sürükleyin veya seçin",
+    "selectButton": "Dosya Seç",
+    "analyzeButton": "Analiz Et",
+    "analyzing": "Analiz ediliyor...",
+    "unsupportedType": "Yalnızca .log ve .txt dosyaları seçilebilir",
+    "noFileSelected": "Lütfen önce bir dosya seçin"
+  },
+  "newAnalysis": {
+    "nameLabel": "Analiz Adı",
+    "namePlaceholder": "Örn. Ödeme Servisi Gece Logları",
+    "nameRequired": "Analiz adı zorunludur",
+    "nameTooShort": "Analiz adı en az 3 karakter olmalıdır",
+    "nameTooLong": "Analiz adı en fazla 100 karakter olabilir",
+    "backendUnreachable": "Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin."
+  },
+  "jobStatus": {
+    "PENDING": "Bekliyor",
+    "RUNNING": "Çalışıyor",
+    "SUCCEEDED": "Tamamlandı",
+    "FAILED": "Başarısız",
+    "CANCELLED": "İptal Edildi"
+  },
+  "jobFilters": {
+    "analysisNamePlaceholder": "Analiz adına göre ara",
+    "fileNamePlaceholder": "Dosya adına göre ara",
+    "allStatuses": "Tüm Durumlar",
+    "apply": "Uygula"
+  },
+  "jobsTable": {
+    "analysisName": "Analiz Adı",
+    "fileName": "Dosya Adı",
+    "status": "Durum",
+    "progress": "İlerleme",
+    "createdAt": "Oluşturulma",
+    "startedAt": "Başlama",
+    "completedAt": "Tamamlanma",
+    "retryCount": "Retry",
+    "actions": "İşlemler",
+    "detail": "Detay",
+    "cancel": "İptal",
+    "retry": "Retry",
+    "result": "Sonuç"
+  },
+  "jobsListView": {
+    "empty": "Henüz analiz işi bulunmuyor.",
+    "loadError": "İş listesi yüklenirken bir hata oluştu. Backend servisine ulaşılamıyor olabilir.",
+    "cancelError": "İş iptal edilirken bir hata oluştu",
+    "retryError": "İş yeniden başlatılırken bir hata oluştu"
+  },
+  "jobDetail": {
+    "back": "← Geri",
+    "jobId": "İş ID",
+    "fileName": "Dosya Adı",
+    "fileSize": "Dosya Boyutu",
+    "createdAt": "Oluşturulma Zamanı",
+    "startedAt": "Başlama Zamanı",
+    "completedAt": "Tamamlanma Zamanı",
+    "elapsed": "Geçen Süre",
+    "retryCount": "Retry Sayısı",
+    "bytes": "bayt",
+    "notAvailable": "—",
+    "cancel": "İptal Et",
+    "retry": "Tekrar Dene",
+    "viewResult": "Sonucu Görüntüle",
+    "seconds": "sn",
+    "minutes": "dk"
+  },
+  "errors": {
+    "APPLICATION_RESTARTED_DURING_ANALYSIS": "Uygulama yeniden başlatıldığı için bu analiz yarıda kaldı.",
+    "ANALYSIS_IO_ERROR": "Log dosyası okunurken bir hata oluştu.",
+    "ANALYSIS_UNEXPECTED_ERROR": "Analiz sırasında beklenmeyen bir hata oluştu.",
+    "EMPTY_FILE": "Yüklenen dosya boş",
+    "INVALID_LOG_FILE": "Sadece .log ve .txt uzantılı dosyalar desteklenir",
+    "FILE_TOO_LARGE": "Dosya boyutu izin verilen maksimum sınırı aşıyor",
+    "INVALID_REQUEST": "İstek geçersiz. Lütfen bir dosya seçtiğinizden emin olun.",
+    "ANALYSIS_NOT_FOUND": "Analiz kaydı bulunamadı",
+    "INVALID_ANALYSIS_NAME": "Analiz adı geçersiz",
+    "JOB_NOT_FOUND": "İş bulunamadı",
+    "INVALID_JOB_STATE": "Bu iş, şu anki durumunda bu işlem için uygun değil",
+    "RETRY_LIMIT_EXCEEDED": "Maksimum tekrar deneme sayısına ulaşıldı",
+    "generic": "Analiz başarısız oldu."
+  },
+  "polling": {
+    "unreachable": "Backend servisine ulaşılamadı. İş durumu güncellenemiyor."
+  },
+  "common": {
+    "loading": "Dosya analiz ediliyor...",
+    "totalLines": "Toplam Satır",
+    "info": "INFO",
+    "warning": "WARN",
+    "error": "ERROR",
+    "exception": "Exception"
+  },
+  "historyView": {
+    "loadError": "Analiz geçmişi yüklenirken bir hata oluştu. Backend servisine ulaşılamıyor olabilir.",
+    "empty": "Henüz analiz geçmişi bulunmuyor.",
+    "deleteSuccess": "Analiz kaydı başarıyla silindi",
+    "deleteError": "Analiz kaydı silinirken bir hata oluştu"
+  },
+  "searchFilterBar": {
+    "fileNamePlaceholder": "Dosya adına göre ara",
+    "minErrorPlaceholder": "Min. ERROR sayısı",
+    "apply": "Uygula"
+  },
+  "historyTable": {
+    "fileName": "Dosya Adı",
+    "analyzedAt": "Analiz Tarihi",
+    "fileSize": "Boyut",
+    "totalLines": "Toplam Satır",
+    "error": "ERROR",
+    "exception": "Exception",
+    "duration": "Süre",
+    "detail": "Detay",
+    "delete": "Sil"
+  },
+  "pagination": {
+    "previous": "Önceki Sayfa",
+    "next": "Sonraki Sayfa",
+    "pageInfo": "Sayfa {{current}} / {{total}}"
+  },
+  "deleteConfirm": {
+    "message": "\"{{fileName}}\" adlı analiz kaydını silmek istediğinize emin misiniz?",
+    "cancel": "Vazgeç",
+    "confirm": "Sil"
+  },
+  "analysisDetail": {
+    "back": "Geçmişe Dön",
+    "mostFrequentErrors": "En Sık Hatalar"
+  },
+  "frequentErrorsTable": {
+    "empty": "Tekrar eden hata mesajı bulunamadı.",
+    "message": "Hata Mesajı",
+    "count": "Tekrar Sayısı"
+  },
+  "backendStatus": {
+    "checking": "Kontrol ediliyor...",
+    "up": "Servis çalışıyor",
+    "down": "Servise ulaşılamıyor"
+  }
+}

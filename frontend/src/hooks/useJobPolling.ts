@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchAnalysisJob } from "../services/analysisJobApi";
 import type { AnalysisJobDetail, JobStatus } from "../types/analysisJob";
 
@@ -6,6 +7,7 @@ const POLL_INTERVAL_MS = 2000;
 const TERMINAL_STATUSES: JobStatus[] = ["SUCCEEDED", "FAILED", "CANCELLED"];
 
 export function useJobPolling(jobId: string | null) {
+  const { t } = useTranslation();
   const [job, setJob] = useState<AnalysisJobDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -23,7 +25,7 @@ export function useJobPolling(jobId: string | null) {
         timerRef.current = null;
       }
     } catch {
-      setErrorMessage("Backend servisine ulaşılamadı. İş durumu güncellenemiyor.");
+      setErrorMessage(t("polling.unreachable"));
     }
   }, []);
 

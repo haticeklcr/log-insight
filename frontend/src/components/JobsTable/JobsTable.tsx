@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./JobsTable.module.css";
 import JobStatusBadge from "../JobStatusBadge/JobStatusBadge";
 import type { AnalysisJobSummary } from "../../types/analysisJob";
@@ -9,25 +10,28 @@ interface JobsTableProps {
   onRetry: (jobId: string) => void;
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, locale: string): string {
   if (!value) return "—";
-  return new Date(value).toLocaleString("tr-TR");
+  return new Date(value).toLocaleString(locale);
 }
 
 export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: JobsTableProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en-US" : "tr-TR";
+
   return (
     <table className={styles.table}>
       <thead>
         <tr>
-          <th className={styles.headerCell}>Analiz Adı</th>
-          <th className={styles.headerCell}>Dosya Adı</th>
-          <th className={styles.headerCell}>Durum</th>
-          <th className={styles.headerCell}>İlerleme</th>
-          <th className={styles.headerCell}>Oluşturulma</th>
-          <th className={styles.headerCell}>Başlama</th>
-          <th className={styles.headerCell}>Tamamlanma</th>
-          <th className={styles.headerCell}>Retry</th>
-          <th className={styles.headerCell}>İşlemler</th>
+          <th className={styles.headerCell}>{t("jobsTable.analysisName")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.fileName")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.status")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.progress")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.createdAt")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.startedAt")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.completedAt")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.retryCount")}</th>
+          <th className={styles.headerCell}>{t("jobsTable.actions")}</th>
         </tr>
       </thead>
       <tbody>
@@ -43,13 +47,13 @@ export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: Job
                 <JobStatusBadge status={job.status} />
               </td>
               <td className={styles.cell}>%{job.progress}</td>
-              <td className={styles.cell}>{formatDateTime(job.createdAt)}</td>
-              <td className={styles.cell}>{formatDateTime(job.startedAt)}</td>
-              <td className={styles.cell}>{formatDateTime(job.completedAt)}</td>
+              <td className={styles.cell}>{formatDateTime(job.createdAt, locale)}</td>
+              <td className={styles.cell}>{formatDateTime(job.startedAt, locale)}</td>
+              <td className={styles.cell}>{formatDateTime(job.completedAt, locale)}</td>
               <td className={styles.cell}>{job.retryCount}</td>
               <td className={styles.cell}>
                 <button type="button" className={styles.actionButton} onClick={() => onViewDetail(job.jobId)}>
-                  Detay
+                  {t("jobsTable.detail")}
                 </button>
                 <button
                   type="button"
@@ -57,7 +61,7 @@ export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: Job
                   onClick={() => onCancel(job.jobId)}
                   disabled={!canCancel}
                 >
-                  İptal
+                  {t("jobsTable.cancel")}
                 </button>
                 <button
                   type="button"
@@ -65,7 +69,7 @@ export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: Job
                   onClick={() => onRetry(job.jobId)}
                   disabled={!canRetry}
                 >
-                  Retry
+                  {t("jobsTable.retry")}
                 </button>
                 <button
                   type="button"
@@ -73,7 +77,7 @@ export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: Job
                   onClick={() => onViewDetail(job.jobId)}
                   disabled={!canViewResult}
                 >
-                  Sonuç
+                  {t("jobsTable.result")}
                 </button>
               </td>
             </tr>

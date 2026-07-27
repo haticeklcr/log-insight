@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./JobFilterBar.module.css";
 import type { JobStatus } from "../../types/analysisJob";
 
@@ -7,16 +8,10 @@ interface JobFilterBarProps {
   onApply: (analysisName: string, fileName: string, status: JobStatus | "") => void;
 }
 
-const STATUS_OPTIONS: { value: JobStatus | ""; label: string }[] = [
-  { value: "", label: "Tüm Durumlar" },
-  { value: "PENDING", label: "Bekliyor" },
-  { value: "RUNNING", label: "Çalışıyor" },
-  { value: "SUCCEEDED", label: "Tamamlandı" },
-  { value: "FAILED", label: "Başarısız" },
-  { value: "CANCELLED", label: "İptal Edildi" },
-];
+const STATUS_VALUES: (JobStatus | "")[] = ["", "PENDING", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"];
 
 export default function JobFilterBar({ onApply }: JobFilterBarProps) {
+  const { t } = useTranslation();
   const [analysisName, setAnalysisName] = useState("");
   const [fileName, setFileName] = useState("");
   const [status, setStatus] = useState<JobStatus | "">("");
@@ -30,14 +25,14 @@ export default function JobFilterBar({ onApply }: JobFilterBarProps) {
     <form className={styles.form} onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Analiz adına göre ara"
+        placeholder={t("jobFilters.analysisNamePlaceholder")}
         value={analysisName}
         onChange={(e) => setAnalysisName(e.target.value)}
         className={styles.input}
       />
       <input
         type="text"
-        placeholder="Dosya adına göre ara"
+        placeholder={t("jobFilters.fileNamePlaceholder")}
         value={fileName}
         onChange={(e) => setFileName(e.target.value)}
         className={styles.input}
@@ -47,14 +42,14 @@ export default function JobFilterBar({ onApply }: JobFilterBarProps) {
         onChange={(e) => setStatus(e.target.value as JobStatus | "")}
         className={styles.select}
       >
-        {STATUS_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+        {STATUS_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {value === "" ? t("jobFilters.allStatuses") : t(`jobStatus.${value}`)}
           </option>
         ))}
       </select>
       <button type="submit" className={styles.button}>
-        Uygula
+        {t("jobFilters.apply")}
       </button>
     </form>
   );

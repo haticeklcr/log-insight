@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./FileUpload.module.css";
 
 interface FileUploadProps {
@@ -21,6 +22,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -28,7 +30,7 @@ export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
 
   function handleFile(file: File) {
     if (!isAllowedFile(file)) {
-      setValidationError("Yalnızca .log ve .txt dosyaları seçilebilir");
+      setValidationError(t("fileUpload.unsupportedType"));
       setSelectedFile(null);
       return;
     }
@@ -63,7 +65,7 @@ export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
 
   function handleAnalyzeClick() {
     if (!selectedFile) {
-      setValidationError("Lütfen önce bir dosya seçin");
+      setValidationError(t("fileUpload.noFileSelected"));
       return;
     }
     onAnalyze(selectedFile);
@@ -77,14 +79,14 @@ export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        <p className={styles.dropzoneText}>Dosyayı buraya sürükleyin veya seçin</p>
+        <p className={styles.dropzoneText}>{t("fileUpload.dropzoneText")}</p>
         <button
           type="button"
           className={styles.selectButton}
           onClick={() => inputRef.current?.click()}
           disabled={isLoading}
         >
-          Dosya Seç
+          {t("fileUpload.selectButton")}
         </button>
         <input
           ref={inputRef}
@@ -112,7 +114,7 @@ export default function FileUpload({ onAnalyze, isLoading }: FileUploadProps) {
         onClick={handleAnalyzeClick}
         disabled={isLoading}
       >
-        {isLoading ? "Analiz ediliyor..." : "Analiz Et"}
+        {isLoading ? t("fileUpload.analyzing") : t("fileUpload.analyzeButton")}
       </button>
     </div>
   );

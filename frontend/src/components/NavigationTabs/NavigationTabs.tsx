@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./NavigationTabs.module.css";
 
 export type ViewMode = "new" | "jobs" | "history";
@@ -8,6 +9,8 @@ interface NavigationTabsProps {
 }
 
 export default function NavigationTabs({ activeView, onChange }: NavigationTabsProps) {
+  const { t } = useTranslation();
+
   return (
     <nav className={styles.tabs}>
       <button
@@ -15,21 +18,21 @@ export default function NavigationTabs({ activeView, onChange }: NavigationTabsP
         className={`${styles.tab} ${activeView === "new" ? styles.tabActive : ""}`}
         onClick={() => onChange("new")}
       >
-        Yeni Analiz
+        {t("nav.newAnalysis")}
       </button>
       <button
         type="button"
         className={`${styles.tab} ${activeView === "jobs" ? styles.tabActive : ""}`}
         onClick={() => onChange("jobs")}
       >
-        Analiz İşleri
+        {t("nav.jobs")}
       </button>
       <button
         type="button"
         className={`${styles.tab} ${activeView === "history" ? styles.tabActive : ""}`}
         onClick={() => onChange("history")}
       >
-        Analiz Geçmişi
+        {t("nav.history")}
       </button>
     </nav>
   );

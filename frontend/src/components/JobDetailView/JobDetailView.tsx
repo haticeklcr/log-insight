@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./JobDetailView.module.css";
 import JobStatusBadge from "../JobStatusBadge/JobStatusBadge";
 import type { AnalysisJobDetail } from "../../types/analysisJob";
@@ -11,26 +12,6 @@ interface JobDetailViewProps {
   onBack: () => void;
 }
 
-const ERROR_CODE_MESSAGES: Record<string, string> = {
-  APPLICATION_RESTARTED_DURING_ANALYSIS: "Uygulama yeniden başlatıldığı için bu analiz yarıda kaldı.",
-  ANALYSIS_IO_ERROR: "Log dosyası okunurken bir hata oluştu.",
-  ANALYSIS_UNEXPECTED_ERROR: "Analiz sırasında beklenmeyen bir hata oluştu.",
-};
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("tr-TR");
-}
-
-function formatDuration(startedAt: string | null, completedAt: string | null): string {
-  if (!startedAt) return "—";
-  const start = new Date(startedAt).getTime();
-  const end = completedAt ? new Date(completedAt).getTime() : Date.now();
-  const seconds = Math.max(0, Math.round((end - start) / 1000));
-  if (seconds < 60) return `${seconds} sn`;
-  return `${Math.floor(seconds / 60)} dk ${seconds % 60} sn`;
-}
-
 export default function JobDetailView({
   job,
   pollingErrorMessage,
@@ -39,15 +20,39 @@ export default function JobDetailView({
   onViewResult,
   onBack,
 }: JobDetailViewProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en-US" : "tr-TR";
+
   const canCancel = job.status === "PENDING" || job.status === "RUNNING";
   const canRetry = job.status === "FAILED";
   const canViewResult = job.status === "SUCCEEDED" && job.analysisId !== null;
   const showProgressBar = job.status === "PENDING" || job.status === "RUNNING";
 
+  function formatDateTime(value: string | null): string {
+    if (!value) return t("jobDetail.notAvailable");
+    return new Date(value).toLocaleString(locale);
+  }
+
+  function formatDuration(startedAt: string | null, completedAt: string | null): string {
+    if (!startedAt) return t("jobDetail.notAvailable");
+    const start = new Date(startedAt).getTime();
+    const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+    const seconds = Math.max(0, Math.round((end - start) / 1000));
+    if (seconds < 60) return `${seconds} ${t("jobDetail.seconds")}`;
+    return `${Math.floor(seconds / 60)} ${t("jobDetail.minutes")} ${seconds % 60} ${t("jobDetail.seconds")}`;
+  }
+
+  function errorMessageFor(errorCode: string | null): string {
+    if (!errorCode) return t("errors.generic");
+    const key = `errors.${errorCode}`;
+    const translated = t(key);
+    return translated === key ? t("errors.generic") : translated;
+  }
+
   return (
     <div className={styles.container}>
       <button type="button" className={styles.backButton} onClick={onBack}>
-        ← Geri
+        {t("jobDetail.back")}
       </button>
 
       <div className={styles.titleRow}>
@@ -65,39 +70,37 @@ export default function JobDetailView({
       )}
 
       <dl className={styles.detailList}>
-        <dt>İş ID</dt>
+        <dt>{t("jobDetail.jobId")}</dt>
         <dd>{job.jobId}</dd>
-        <dt>Dosya Adı</dt>
+        <dt>{t("jobDetail.fileName")}</dt>
         <dd>{job.fileName}</dd>
-        <dt>Dosya Boyutu</dt>
-        <dd>{job.fileSize} bayt</dd>
-        <dt>Oluşturulma Zamanı</dt>
+        <dt>{t("jobDetail.fileSize")}</dt>
+        <dd>{job.fileSize} {t("jobDetail.bytes")}</dd>
+        <dt>{t("jobDetail.createdAt")}</dt>
         <dd>{formatDateTime(job.createdAt)}</dd>
-        <dt>Başlama Zamanı</dt>
+        <dt>{t("jobDetail.startedAt")}</dt>
         <dd>{formatDateTime(job.startedAt)}</dd>
-        <dt>Tamamlanma Zamanı</dt>
+        <dt>{t("jobDetail.completedAt")}</dt>
         <dd>{formatDateTime(job.completedAt)}</dd>
-        <dt>Geçen Süre</dt>
+        <dt>{t("jobDetail.elapsed")}</dt>
         <dd>{formatDuration(job.startedAt, job.completedAt)}</dd>
-        <dt>Retry Sayısı</dt>
+        <dt>{t("jobDetail.retryCount")}</dt>
         <dd>{job.retryCount}</dd>
       </dl>
 
       {job.status === "FAILED" && job.errorCode && (
-        <p className={styles.errorInfo}>
-          {ERROR_CODE_MESSAGES[job.errorCode] ?? "Analiz başarısız oldu."}
-        </p>
+        <p className={styles.errorInfo}>{errorMessageFor(job.errorCode)}</p>
       )}
 
       <div className={styles.actions}>
         {canCancel && (
           <button type="button" className={styles.cancelButton} onClick={onCancel}>
-            İptal Et
+            {t("jobDetail.cancel")}
           </button>
         )}
         {canRetry && (
           <button type="button" className={styles.retryButton} onClick={onRetry}>
-            Tekrar Dene
+            {t("jobDetail.retry")}
           </button>
         )}
         {canViewResult && (
@@ -106,7 +109,7 @@ export default function JobDetailView({
             className={styles.resultButton}
             onClick={() => onViewResult(job.analysisId as number)}
           >
-            Sonucu Görüntüle
+            {t("jobDetail.viewResult")}
           </button>
         )}
       </div>

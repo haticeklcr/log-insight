@@ -1,0 +1,21 @@
+.container {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.option {
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+  color: #a0a0a0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.active {
+  background-color: #4a7fd6;
+  color: #ffffff;
+  border-color: #4a7fd6;
+}

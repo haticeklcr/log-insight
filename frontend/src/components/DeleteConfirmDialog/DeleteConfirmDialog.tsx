@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./DeleteConfirmDialog.module.css";
 
 interface DeleteConfirmDialogProps {
@@ -7,18 +8,17 @@ interface DeleteConfirmDialogProps {
 }
 
 export default function DeleteConfirmDialog({ fileName, onConfirm, onCancel }: DeleteConfirmDialogProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.overlay}>
       <div className={styles.dialog}>
-        <p className={styles.message}>
-          <strong>{fileName}</strong> adlı analiz kaydını silmek istediğinize emin misiniz?
-        </p>
+        <p className={styles.message}>{t("deleteConfirm.message", { fileName })}</p>
         <div className={styles.actions}>
           <button type="button" className={styles.cancelButton} onClick={onCancel}>
-            Vazgeç
+            {t("deleteConfirm.cancel")}
           </button>
           <button type="button" className={styles.confirmButton} onClick={onConfirm}>
-            Sil
+            {t("deleteConfirm.confirm")}
           </button>
         </div>
       </div>

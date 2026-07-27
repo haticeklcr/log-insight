@@ -24,3 +24,9 @@
   color: #a0a0a0;
   font-size: 0.95rem;
 }
+
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styles from "./AnalysisDetailView.module.css";
 import StatCard from "../StatCard/StatCard";
 import FrequentErrorsTable from "../FrequentErrorsTable/FrequentErrorsTable";
@@ -10,10 +11,11 @@ interface AnalysisDetailViewProps {
 }
 
 export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailViewProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.container}>
       <button type="button" className={styles.backButton} onClick={onBack}>
-        Geçmişe Dön
+        {t("analysisDetail.back")}
       </button>
       <h2 className={styles.title}>{detail.fileName}</h2>
       <div className={styles.meta}>
@@ -22,14 +24,14 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
         <span>{formatDuration(detail.processingDurationMs)}</span>
       </div>
       <div className={styles.cards}>
-        <StatCard label="Toplam Satır" value={detail.totalLines} />
-        <StatCard label="INFO" value={detail.infoCount} />
-        <StatCard label="WARN" value={detail.warningCount} />
-        <StatCard label="ERROR" value={detail.errorCount} />
-        <StatCard label="Exception" value={detail.exceptionCount} />
+        <StatCard label={t("common.totalLines")} value={detail.totalLines} />
+        <StatCard label={t("common.info")} value={detail.infoCount} />
+        <StatCard label={t("common.warning")} value={detail.warningCount} />
+        <StatCard label={t("common.error")} value={detail.errorCount} />
+        <StatCard label={t("common.exception")} value={detail.exceptionCount} />
       </div>
       <section>
-        <h3 className={styles.sectionTitle}>En Sık Hatalar</h3>
+        <h3 className={styles.sectionTitle}>{t("analysisDetail.mostFrequentErrors")}</h3>
         <FrequentErrorsTable errors={detail.mostFrequentErrors} />
       </section>
     </div>
