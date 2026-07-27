@@ -3,52 +3,28 @@ import styles from "./App.module.css";
 import Header from "./components/Header/Header";
 import NavigationTabs from "./components/NavigationTabs/NavigationTabs";
 import type { ViewMode } from "./components/NavigationTabs/NavigationTabs";
-import FileUpload from "./components/FileUpload/FileUpload";
+import NewAnalysisFlow from "./components/NewAnalysisFlow/NewAnalysisFlow";
 import LoadingIndicator from "./components/LoadingIndicator/LoadingIndicator";
 import ErrorAlert from "./components/ErrorAlert/ErrorAlert";
-import AnalysisSummary from "./components/AnalysisSummary/AnalysisSummary";
-import FrequentErrorsTable from "./components/FrequentErrorsTable/FrequentErrorsTable";
 import HistoryView from "./components/HistoryView/HistoryView";
 import AnalysisDetailView from "./components/AnalysisDetailView/AnalysisDetailView";
-import { analyzeLogFile, fetchAnalysisDetail, LogAnalysisApiError } from "./services/logAnalysisApi";
-import type { LogAnalysisResponse } from "./types/logAnalysis";
+import JobsListView from "./components/JobsListView/JobsListView";
+import JobDetailView from "./components/JobDetailView/JobDetailView";
+import { fetchAnalysisDetail } from "./services/logAnalysisApi";
+import { cancelAnalysisJob, retryAnalysisJob } from "./services/analysisJobApi";
+import { useJobPolling } from "./hooks/useJobPolling";
 import type { AnalysisDetail } from "./types/analysisHistory";
 
 export default function App() {
   const [view, setView] = useState<ViewMode>("new");
-
-  const [result, setResult] = useState<LogAnalysisResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detail, setDetail] = useState<AnalysisDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  async function handleAnalyze(file: File) {
-    setIsLoading(true);
-    setErrorMessage(null);
-    setResult(null);
-
-    try {
-      const analysisResult = await analyzeLogFile(file);
-      setResult(analysisResult);
-    } catch (error) {
-      if (error instanceof LogAnalysisApiError) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  function handleReset() {
-    setResult(null);
-    setErrorMessage(null);
-  }
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const { job: activeJob, errorMessage: pollingErrorMessage, refetch: refetchJob } = useJobPolling(activeJobId);
 
   useEffect(() => {
     if (detailId === null) {
@@ -68,6 +44,36 @@ export default function App() {
   function handleChangeView(nextView: ViewMode) {
     setView(nextView);
     setDetailId(null);
+    setActiveJobId(null);
+  }
+
+  function handleJobCreated(jobId: string) {
+    setView("jobs");
+    setActiveJobId(jobId);
+  }
+
+  async function handleCancelJob() {
+    if (!activeJobId) return;
+    try {
+      await cancelAnalysisJob(activeJobId);
+    } finally {
+      await refetchJob();
+    }
+  }
+
+  async function handleRetryJob() {
+    if (!activeJobId) return;
+    try {
+      await retryAnalysisJob(activeJobId);
+    } finally {
+      await refetchJob();
+    }
+  }
+
+  function handleViewResultFromJob(analysisId: number) {
+    setActiveJobId(null);
+    setView("history");
+    setDetailId(analysisId);
   }
 
   return (
@@ -75,22 +81,23 @@ export default function App() {
       <Header />
       <NavigationTabs activeView={view} onChange={handleChangeView} />
       <main className={styles.main}>
-        {view === "new" && (
+        {view === "new" && <NewAnalysisFlow onJobCreated={handleJobCreated} />}
+
+        {view === "jobs" && activeJobId === null && <JobsListView onViewDetail={setActiveJobId} />}
+
+        {view === "jobs" && activeJobId !== null && (
           <>
-            {!result && <FileUpload onAnalyze={handleAnalyze} isLoading={isLoading} />}
-            {isLoading && <LoadingIndicator />}
-            {errorMessage && <ErrorAlert message={errorMessage} />}
-            {result && (
-              <div className={styles.resultContainer}>
-                <AnalysisSummary result={result} />
-                <section>
-                  <h3 className={styles.sectionTitle}>En Sık Hatalar</h3>
-                  <FrequentErrorsTable errors={result.mostFrequentErrors} />
-                </section>
-                <button type="button" className={styles.newAnalysisButton} onClick={handleReset}>
-                  Yeni Analiz
-                </button>
-              </div>
+            {!activeJob && !pollingErrorMessage && <LoadingIndicator />}
+            {pollingErrorMessage && !activeJob && <ErrorAlert message={pollingErrorMessage} />}
+            {activeJob && (
+              <JobDetailView
+                job={activeJob}
+                pollingErrorMessage={pollingErrorMessage}
+                onCancel={handleCancelJob}
+                onRetry={handleRetryJob}
+                onViewResult={handleViewResultFromJob}
+                onBack={() => setActiveJobId(null)}
+              />
             )}
           </>
         )}

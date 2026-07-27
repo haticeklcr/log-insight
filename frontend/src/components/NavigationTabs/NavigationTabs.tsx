@@ -1,6 +1,6 @@
 import styles from "./NavigationTabs.module.css";
 
-export type ViewMode = "new" | "history";
+export type ViewMode = "new" | "jobs" | "history";
 
 interface NavigationTabsProps {
   activeView: ViewMode;
@@ -16,6 +16,13 @@ export default function NavigationTabs({ activeView, onChange }: NavigationTabsP
         onClick={() => onChange("new")}
       >
         Yeni Analiz
+      </button>
+      <button
+        type="button"
+        className={`${styles.tab} ${activeView === "jobs" ? styles.tabActive : ""}`}
+        onClick={() => onChange("jobs")}
+      >
+        Analiz İşleri
       </button>
       <button
         type="button"

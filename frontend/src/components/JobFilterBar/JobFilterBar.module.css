@@ -1,0 +1,26 @@
+.form {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.input,
+.select {
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  font-size: 0.85rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background-color: #2a2a2a;
+  color: #f0f0f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,32 @@
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pending {
+  background-color: #3a3a2a;
+  color: #e0d090;
+}
+
+.running {
+  background-color: #2a3550;
+  color: #90b0f0;
+}
+
+.succeeded {
+  background-color: #1f3a2a;
+  color: #90e0a0;
+}
+
+.failed {
+  background-color: #3a2020;
+  color: #ffb3b3;
+}
+
+.cancelled {
+  background-color: #2a2a2a;
+  color: #a0a0a0;
+}
