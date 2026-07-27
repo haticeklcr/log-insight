@@ -57,6 +57,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_ANALYSIS_NAME", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(JobNotFoundException.class)
+    public ResponseEntity<ApiError> handleJobNotFound(JobNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "JOB_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidJobStateException.class)
+    public ResponseEntity<ApiError> handleInvalidJobState(InvalidJobStateException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "INVALID_JOB_STATE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(JobRetryLimitExceededException.class)
+    public ResponseEntity<ApiError> handleRetryLimitExceeded(JobRetryLimitExceededException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "RETRY_LIMIT_EXCEEDED", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(
