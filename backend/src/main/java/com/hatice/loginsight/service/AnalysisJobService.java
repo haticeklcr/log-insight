@@ -129,10 +129,23 @@ public class AnalysisJobService {
     }
 
     public Page<AnalysisJobEntity> listJobs(String analysisName, String fileName, JobStatus status, Pageable pageable) {
-        Specification<AnalysisJobEntity> spec = Specification
-                .where(AnalysisJobSpecifications.hasAnalysisNameContaining(analysisName))
-                .and(AnalysisJobSpecifications.hasFileNameContaining(fileName))
-                .and(AnalysisJobSpecifications.hasStatus(status));
+        Specification<AnalysisJobEntity> spec = (root, query, cb) -> cb.conjunction();
+
+        Specification<AnalysisJobEntity> nameSpec = AnalysisJobSpecifications.hasAnalysisNameContaining(analysisName);
+        if (nameSpec != null) {
+            spec = spec.and(nameSpec);
+        }
+
+        Specification<AnalysisJobEntity> fileNameSpec = AnalysisJobSpecifications.hasFileNameContaining(fileName);
+        if (fileNameSpec != null) {
+            spec = spec.and(fileNameSpec);
+        }
+
+        Specification<AnalysisJobEntity> statusSpec = AnalysisJobSpecifications.hasStatus(status);
+        if (statusSpec != null) {
+            spec = spec.and(statusSpec);
+        }
+
         return analysisJobRepository.findAll(spec, pageable);
     }
 
