@@ -147,9 +147,10 @@ public class AnalysisJobRunner {
         job.setCompletedAt(Instant.now());
         job.setErrorCode(errorCode);
         job.setErrorMessage(errorMessage);
-        job = analysisJobRepository.save(job);
-
-        tempFileStorageService.delete(job.getId());
+        analysisJobRepository.save(job);
+        // Not: geçici dosya BURADA silinmiyor — FAILED bir job retry edilebileceği
+        // için dosyaya ihtiyaç kalabilir. Dosya, ancak nihai bir sonuca (SUCCEEDED
+        // ya da CANCELLED) ulaşıldığında ya da retry limiti dolduğunda silinir.
     }
 
     private void handleCancellation(AnalysisJobEntity job) {

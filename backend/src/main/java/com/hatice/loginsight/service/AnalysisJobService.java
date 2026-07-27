@@ -3,13 +3,18 @@ package com.hatice.loginsight.service;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
 import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.exception.InvalidAnalysisNameException;
+import com.hatice.loginsight.exception.JobNotFoundException;
+import com.hatice.loginsight.exception.JobRetryLimitExceededException;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class AnalysisJobService {
@@ -18,15 +23,21 @@ public class AnalysisJobService {
     private final LogFileValidator logFileValidator;
     private final TempFileStorageService tempFileStorageService;
     private final AnalysisJobRunner analysisJobRunner;
+    private final JobStateMachine jobStateMachine;
+    private final int maxRetry;
 
     public AnalysisJobService(AnalysisJobRepository analysisJobRepository,
                                LogFileValidator logFileValidator,
                                TempFileStorageService tempFileStorageService,
-                               AnalysisJobRunner analysisJobRunner) {
+                               AnalysisJobRunner analysisJobRunner,
+                               JobStateMachine jobStateMachine,
+                               @Value("${app.analysis-job.max-retry}") int maxRetry) {
         this.analysisJobRepository = analysisJobRepository;
         this.logFileValidator = logFileValidator;
         this.tempFileStorageService = tempFileStorageService;
         this.analysisJobRunner = analysisJobRunner;
+        this.jobStateMachine = jobStateMachine;
+        this.maxRetry = maxRetry;
     }
 
     public AnalysisJobEntity createJob(MultipartFile file, String analysisName) {
@@ -65,5 +76,57 @@ public class AnalysisJobService {
             throw new InvalidAnalysisNameException("Analiz adı 3 ile 100 karakter arasında olmalıdır");
         }
         return trimmed;
+    }
+
+    public AnalysisJobEntity getJob(UUID jobId) {
+        return findJobOrThrow(jobId);
+    }
+
+    @Transactional
+    public AnalysisJobEntity cancelJob(UUID jobId) {
+        AnalysisJobEntity job = findJobOrThrow(jobId);
+        jobStateMachine.assertCanBeCancelled(job.getStatus());
+
+        if (job.getStatus() == JobStatus.PENDING) {
+            job.setStatus(JobStatus.CANCELLED);
+            job.setCompletedAt(Instant.now());
+            job = analysisJobRepository.save(job);
+            tempFileStorageService.delete(job.getId());
+        } else {
+            job.setCancelRequested(true);
+            job = analysisJobRepository.save(job);
+        }
+
+        return job;
+    }
+
+    @Transactional
+    public AnalysisJobEntity retryJob(UUID jobId) {
+        AnalysisJobEntity job = findJobOrThrow(jobId);
+        jobStateMachine.assertCanBeRetried(job.getStatus());
+
+        if (job.getRetryCount() >= maxRetry) {
+            throw new JobRetryLimitExceededException(
+                    "Maksimum retry sayısına (" + maxRetry + ") ulaşıldı");
+        }
+
+        job.setStatus(JobStatus.PENDING);
+        job.setRetryCount(job.getRetryCount() + 1);
+        job.setProgress(0);
+        job.setCancelRequested(false);
+        job.setStartedAt(null);
+        job.setCompletedAt(null);
+        job.setErrorCode(null);
+        job.setErrorMessage(null);
+        job = analysisJobRepository.save(job);
+
+        analysisJobRunner.runAnalysis(job.getId());
+
+        return job;
+    }
+
+    private AnalysisJobEntity findJobOrThrow(UUID jobId) {
+        return analysisJobRepository.findById(jobId)
+                .orElseThrow(() -> new JobNotFoundException("Job bulunamadı: " + jobId));
     }
 }
