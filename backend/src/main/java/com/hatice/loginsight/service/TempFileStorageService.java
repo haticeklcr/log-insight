@@ -6,10 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class TempFileStorageService {
@@ -51,6 +55,30 @@ public class TempFileStorageService {
 
     public boolean exists(UUID jobId) {
         return Files.exists(resolve(jobId));
+    }
+
+    public List<UUID> listStoredJobIds() {
+        try (var files = Files.list(baseDirectory)) {
+            return files
+                    .map(path -> path.getFileName().toString())
+                    .map(this::parseJobIdFromFileName)
+                    .flatMap(Optional::stream)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Geçici dizin listelenirken hata oluştu: " + baseDirectory, e);
+        }
+    }
+
+    private Optional<UUID> parseJobIdFromFileName(String fileName) {
+        if (!fileName.endsWith(".tmp")) {
+            return Optional.empty();
+        }
+        String idPart = fileName.substring(0, fileName.length() - ".tmp".length());
+        try {
+            return Optional.of(UUID.fromString(idPart));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     private static class UncheckedIoStorageException extends RuntimeException {
