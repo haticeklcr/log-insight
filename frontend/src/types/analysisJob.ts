@@ -18,6 +18,7 @@ export interface AnalysisJobSummary {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  analysisId: number | null;
 }
 
 export interface AnalysisJobDetail {

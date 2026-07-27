@@ -38,7 +38,7 @@ export default function JobsTable({ jobs, onViewDetail, onCancel, onRetry }: Job
         {jobs.map((job) => {
           const canCancel = job.status === "PENDING" || job.status === "RUNNING";
           const canRetry = job.status === "FAILED";
-          const canViewResult = job.status === "SUCCEEDED";
+          const canViewResult = job.status === "SUCCEEDED" && job.analysisId !== null;
           return (
             <tr key={job.jobId}>
               <td className={styles.cell}>{job.analysisName}</td>

@@ -93,6 +93,7 @@ public class AnalysisJobController {
         dto.setCreatedAt(job.getCreatedAt());
         dto.setStartedAt(job.getStartedAt());
         dto.setCompletedAt(job.getCompletedAt());
+        dto.setAnalysisId(job.getAnalysisId());
         return dto;
     }
 }

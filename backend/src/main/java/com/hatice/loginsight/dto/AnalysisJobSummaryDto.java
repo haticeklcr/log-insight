@@ -16,6 +16,7 @@ public class AnalysisJobSummaryDto {
     private Instant createdAt;
     private Instant startedAt;
     private Instant completedAt;
+    private Long analysisId;
 
     public AnalysisJobSummaryDto() {
     }
@@ -90,5 +91,13 @@ public class AnalysisJobSummaryDto {
 
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public Long getAnalysisId() {
+        return analysisId;
+    }
+
+    public void setAnalysisId(Long analysisId) {
+        this.analysisId = analysisId;
     }
 }
