@@ -1,7 +1,20 @@
 # Log Analiz Uygulaması (log-insight)
 
 ## Amaç
-Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir.
+Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir. V4 ile birlikte log analizi artık arka planda çalışan asenkron bir **job** olarak yürütülür; kullanıcı her analize bir ad verir, job'ın durumunu (bekliyor/çalışıyor/tamamlandı/başarısız/iptal edildi) canlı olarak izleyebilir, iptal edebilir ya da başarısız olanları tekrar deneyebilir. Uygulama Türkçe ve İngilizce dillerini destekler.
+
+## V4 ile Eklenen Özellikler
+- Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)
+- Her analiz için zorunlu bir **analiz adı** (3-100 karakter, trim edilir, dosya adından bağımsız)
+- Job durumları: `PENDING` → `RUNNING` → `SUCCEEDED`/`FAILED`/`CANCELLED`, veritabanında saklanır
+- Log dosyalarının **streaming** (satır satır, tamamı belleğe alınmadan) işlenmesi, belirli aralıklarla progress güncellemesi
+- Job **iptal etme** (bekleyen job anında, çalışan job işbirlikçi/cooperative şekilde iptal edilir) ve **retry** (sınırlı sayıda, başarısız job'lar için) akışları
+- Uygulama yeniden başladığında yarım kalan (`RUNNING`) job'ların tespit edilip `FAILED` olarak işaretlenmesi, sahipsiz geçici dosyaların temizlenmesi
+- Job geçmişini sayfalı listeleme, analiz adı/dosya adı/durum filtreleme
+- Frontend'e "Analiz İşleri" sekmesi: job listesi, job detay ekranı (progress bar, geçen süre, iptal/retry/sonuç butonları), 2 saniyelik polling
+- Türkçe ve İngilizce dil desteği (`i18next`), Header'da dil seçici, tercih `localStorage`'da kalıcı
+- Yeni Liquibase migration'ları (`analysis_job` tablosu ve ilişkileri)
+- Gerçek asenkron job akışını test eden yeni Testcontainers entegrasyon testleri
 
 ## V3 ile Eklenen Özellikler
 - Her başarılı analiz sonucunun PostgreSQL'e kalıcı olarak kaydedilmesi (analiz + en sık hata kayıtları tek transaction içinde)
@@ -27,9 +40,9 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 
 **Geliştirme ortamı:** Windows 10/11, WSL2, Ubuntu 22.04, VS Code + WSL eklentisi, Git, GitHub
 
-**Backend:** Java 21, Spring Boot 4.1.0, Maven, Spring Web, Spring Validation, Spring Data JPA, Hibernate, Liquibase, Spring Boot Actuator, JUnit 5, Mockito, AssertJ, Testcontainers
+**Backend:** Java 21, Spring Boot 4.1.0, Maven, Spring Web, Spring Validation, Spring Data JPA, Hibernate, Liquibase, Spring Boot Actuator, Spring Async, JUnit 5, Mockito, AssertJ, Testcontainers
 
-**Frontend:** Node.js LTS, npm, React, TypeScript, Vite, Fetch API, CSS Modules, Vitest, React Testing Library
+**Frontend:** Node.js LTS, npm, React, TypeScript, Vite, Fetch API, CSS Modules, i18next, react-i18next, Vitest, React Testing Library
 
 **Veritabanı ve container:** PostgreSQL 16, Docker, Docker Compose, Nginx
 
@@ -38,25 +51,28 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 log-insight/
 ├── backend/                                  # Spring Boot REST API
 │   ├── src/main/java/com/hatice/loginsight/
-│   │   ├── controller/                        # HTTP endpoint'leri (LogAnalysisController, AnalysisHistoryController)
-│   │   ├── service/                           # İş mantığı (LogAnalysisService, AnalysisHistoryService)
+│   │   ├── controller/                        # HTTP endpoint'leri (LogAnalysisController, AnalysisHistoryController, AnalysisJobController)
+│   │   ├── service/                           # İş mantığı (LogAnalysisService, AnalysisHistoryService, AnalysisJobService, AnalysisJobRunner, JobStateMachine, TempFileStorageService, StartupRecoveryService)
 │   │   ├── repository/                        # Spring Data JPA repository'leri
-│   │   ├── entity/                             # JPA entity'leri (LogAnalysisEntity, FrequentErrorEntity)
+│   │   ├── entity/                             # JPA entity'leri (LogAnalysisEntity, FrequentErrorEntity, AnalysisJobEntity, JobStatus)
 │   │   ├── dto/                                 # Veri transfer nesneleri (entity'ler dışa hiç açılmaz)
 │   │   ├── exception/                          # Özel exception'lar + merkezi hata yönetimi
-│   │   └── config/                              # CORS gibi uygulama genelinde ayarlar
+│   │   └── config/                              # CORS, async executor gibi uygulama genelinde ayarlar
 │   ├── src/main/resources/
 │   │   ├── application.properties
 │   │   └── db/changelog/                        # Liquibase migration dosyaları
 │   ├── src/test/java/                          # Backend testleri (Testcontainers dahil)
 │   ├── sample.log                               # Örnek log dosyası
-│   ├── sample2.log                              # İkinci örnek log dosyası
+│   ├── sample2.log                              # İkinci örnek log dosyası (büyük, karışık seviyeli)
 │   ├── pom.xml
 │   └── Dockerfile
 ├── frontend/                                    # React + TypeScript web arayüzü
 │   ├── src/
-│   │   ├── components/                          # Header, FileUpload, HistoryView, AnalysisDetailView, vb.
-│   │   ├── services/                            # Backend ile iletişim (logAnalysisApi.ts)
+│   │   ├── components/                          # Header, FileUpload, NewAnalysisFlow, JobsListView, JobDetailView, HistoryView, AnalysisDetailView, LanguageSwitcher, vb.
+│   │   ├── services/                            # Backend ile iletişim (logAnalysisApi.ts, analysisJobApi.ts)
+│   │   ├── hooks/                                # useJobPolling.ts
+│   │   ├── i18n/                                 # i18next kurulumu + locales/tr.json, locales/en.json
+│   │   ├── utils/                                # apiErrorMessage.ts, format.ts
 │   │   ├── types/                               # TypeScript tip tanımları
 │   │   └── App.tsx
 │   ├── nginx.conf                                # Nginx reverse proxy yapılandırması
@@ -70,8 +86,6 @@ log-insight/
 
 ## Veritabanı Yapısı
 
-V3 ile birlikte iki tablo Liquibase migration'ları üzerinden oluşturuluyor:
-
 **`log_analysis`** — her analiz işleminin özet bilgisi
 
 | Alan | Tip | Açıklama |
@@ -83,6 +97,7 @@ V3 ile birlikte iki tablo Liquibase migration'ları üzerinden oluşturuluyor:
 | `info_count` / `warning_count` / `error_count` / `exception_count` | INT | |
 | `analyzed_at` | TIMESTAMP | |
 | `processing_duration_ms` | BIGINT | analiz süresi (milisaniye) |
+| `analysis_name` | VARCHAR(100) | (V4) kullanıcının verdiği analiz adı |
 
 **`frequent_error`** — bir analize ait en sık tekrar eden hata mesajları
 
@@ -93,24 +108,84 @@ V3 ile birlikte iki tablo Liquibase migration'ları üzerinden oluşturuluyor:
 | `message` | VARCHAR(1000) | |
 | `occurrence_count` | INT | |
 
+**`analysis_job`** (V4) — her asenkron analiz işinin durumu ve geçmişi
+
+| Alan | Tip | Açıklama |
+|---|---|---|
+| `id` | UUID (PK) | |
+| `analysis_name` | VARCHAR(100) | |
+| `file_name` | VARCHAR(255) | |
+| `file_size` | BIGINT | |
+| `status` | VARCHAR(20) | `PENDING`/`RUNNING`/`SUCCEEDED`/`FAILED`/`CANCELLED` |
+| `progress` | INT | 0-100 |
+| `retry_count` | INT | |
+| `created_at` / `started_at` / `completed_at` | TIMESTAMP | |
+| `error_code` / `error_message` | VARCHAR | |
+| `analysis_id` | BIGINT (FK → `log_analysis.id`, `ON DELETE SET NULL`) | başarılı job'ı sonucuna bağlar |
+| `cancel_requested` | BOOLEAN | |
+| `version` | BIGINT | optimistic locking için |
+
 Log dosyasının ham içeriği veritabanında saklanmaz — yalnızca analiz sonucu ve dosya metadata'sı kaydedilir.
 
-**Index'ler:** `analyzed_at`, `file_name` ve `error_count` üzerinde — sırasıyla tarihe göre sıralama, dosya adına göre arama ve minimum-hata filtresi sorgularını hızlandırmak için eklendi.
+**Index'ler:** `log_analysis.analyzed_at`, `log_analysis.file_name`, `log_analysis.error_count`, `analysis_job.status`, `analysis_job.created_at`.
 
 ### Entity İlişkilerinin Kısa Açıklaması
-`LogAnalysisEntity` ile `FrequentErrorEntity` arasında bire-çok (`@OneToMany`) ilişki var; `cascade = CascadeType.ALL` ve `orphanRemoval = true` sayesinde bir analiz kaydı silindiğinde (ya da bir hata kaydı listeden çıkarıldığında) ilişkili `frequent_error` satırları da JPA seviyesinde otomatik olarak silinir. Aynı davranış veritabanı seviyesinde de `ON DELETE CASCADE` foreign key'i ile güvence altına alınmıştır — yani silme işlemi ister uygulama kodundan ister doğrudan veritabanından yapılsın, tutarlılık korunur.
+`LogAnalysisEntity` ile `FrequentErrorEntity` arasında bire-çok (`@OneToMany`) ilişki var; `cascade = CascadeType.ALL` ve `orphanRemoval = true` sayesinde bir analiz kaydı silindiğinde ilişkili `frequent_error` satırları da JPA seviyesinde otomatik olarak silinir. Aynı davranış veritabanı seviyesinde de `ON DELETE CASCADE` foreign key'i ile güvence altına alınmıştır.
+
+`analysis_job.analysis_id` foreign key'i ise `ON DELETE SET NULL` — bir analiz sonucu "Analiz Geçmişi"nden silinse bile, onu üreten job kaydı (ne zaman çalıştığı, süresi, retry sayısı gibi geçmiş bilgisi) korunur; sadece artık var olmayan sonuca işaret eden `analysis_id` `NULL`'a düşer. Frontend'de job listesindeki "Sonuç" butonu, job listesi DTO'sundaki `analysisId` alanı `null` ise pasif hale gelir.
 
 ## Liquibase Migration Yapısı
 
 ```
 backend/src/main/resources/db/changelog/
-├── db.changelog-master.yaml              # Diğer tüm changelog'ları include eder
-├── 001-create-log-analysis-table.yaml    # log_analysis tablosu
-├── 002-create-frequent-error-table.yaml  # frequent_error tablosu + foreign key
-└── 003-add-analysis-indexes.yaml         # analyzed_at / file_name / error_count index'leri
+├── db.changelog-master.yaml                       # Diğer tüm changelog'ları include eder
+├── 001-create-log-analysis-table.yaml             # log_analysis tablosu
+├── 002-create-frequent-error-table.yaml           # frequent_error tablosu + foreign key
+├── 003-add-analysis-indexes.yaml                  # analyzed_at / file_name / error_count index'leri
+├── 004-create-analysis-job-table.yaml             # analysis_job tablosu (V4)
+├── 005-add-analysis-job-indexes.yaml              # status / created_at index'leri (V4)
+├── 006-add-job-analysis-relation.yaml             # analysis_job → log_analysis foreign key (V4)
+├── 007-add-analysis-name-to-log-analysis.yaml     # log_analysis.analysis_name sütunu (V4)
+└── 008-fix-analysis-job-fk-on-delete.yaml         # foreign key'i ON DELETE SET NULL yapar (V4)
 ```
 
-Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — yani Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
+Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
+
+## Asenkron Analiz Mimarisi
+
+Log analizi artık HTTP isteğini karşılayan thread'de değil, ayrı bir **thread havuzunda** (`@Async`) yürütülüyor:
+
+1. `POST /api/v1/analysis-jobs` çağrıldığında: dosya validasyonu + analiz adı validasyonu yapılır, `PENDING` durumunda bir `analysis_job` kaydı oluşturulur, dosya `ANALYSIS_TEMP_DIRECTORY`'e geçici olarak yazılır, arka plan işi tetiklenir ve **hemen** (analiz beklemeden) cevap dönülür.
+2. Arka plandaki iş (`AnalysisJobRunner`), job'ı `RUNNING`'e çekip dosyayı **satır satır (streaming)** okur; belirli aralıklarla (`ANALYSIS_JOB_PROGRESS_INTERVAL` satırda bir) hem progress'i günceller hem iptal isteğini kontrol eder.
+3. İş bitince duruma göre `SUCCEEDED` (bir `log_analysis` kaydı oluşturularak), `FAILED` ya da `CANCELLED` olarak sonuçlanır.
+
+### Job Durumları ve Geçişleri
+
+| Geçiş | Ne zaman |
+|---|---|
+| `PENDING → RUNNING` | Arka plan thread'i işi ele aldığında |
+| `RUNNING → SUCCEEDED` | Analiz sorunsuz bitince |
+| `RUNNING → FAILED` | Analiz sırasında hata oluşunca, ya da uygulama yeniden başlarsa (`APPLICATION_RESTARTED_DURING_ANALYSIS`) |
+| `PENDING → CANCELLED` | Henüz başlamamış bir job iptal edilince (anında) |
+| `RUNNING → CANCELLED` | Çalışan bir job'a iptal talebi ulaşıp bir sonraki kontrol noktasında işlenince |
+| `FAILED → PENDING` | Retry ile (yalnızca `FAILED` job'lar, sınırlı sayıda) |
+
+Tüm geçiş kuralları `JobStateMachine` sınıfında merkezi olarak tutulur — örneğin `SUCCEEDED` bir job iptal edilemez, `PENDING`/`RUNNING` bir job retry edilemez.
+
+### Thread Pool Configuration
+
+| Environment Variable | Varsayılan | Açıklama |
+|---|---|---|
+| `ANALYSIS_EXECUTOR_CORE_POOL_SIZE` | `2` | Havuzda her an hazır bekleyen minimum thread sayısı |
+| `ANALYSIS_EXECUTOR_MAX_POOL_SIZE` | `4` | Yoğunlukta çıkılabilecek maksimum thread sayısı |
+| `ANALYSIS_EXECUTOR_QUEUE_CAPACITY` | `50` | Tüm thread'ler doluyken bekleyebilecek maksimum iş sayısı |
+| `ANALYSIS_EXECUTOR_THREAD_NAME_PREFIX` | `log-analysis-` | Oluşturulan thread'lerin isim öneki (loglarda ayırt etmek için) |
+| `ANALYSIS_JOB_MAX_RETRY` | `3` | Bir job'ın en fazla kaç kez retry edilebileceği |
+| `ANALYSIS_JOB_PROGRESS_INTERVAL` | `100` | Kaç satırda bir progress/iptal kontrolü yapılacağı |
+
+### Geçici Dosya Yönetimi
+
+Yüklenen dosya, analiz arka planda bitene kadar `ANALYSIS_TEMP_DIRECTORY` (varsayılan `/tmp/log-insight`) altında, **job ID'siyle** (kullanıcının gönderdiği dosya adıyla değil) adlandırılarak saklanır — bu, path traversal saldırılarına karşı bir önlemdir. Dosya, job `SUCCEEDED`/`CANCELLED` olunca ya da uygulama yeniden başlayıp yarım kalan job'ı `FAILED` yapınca silinir; `FAILED` bir job'ın dosyası retry ihtimaline karşı **silinmez**. Uygulama her başladığında, hiçbir `PENDING` job'a karşılık gelmeyen "sahipsiz" geçici dosyalar da otomatik temizlenir.
 
 ## Development Ortamında Backend'i Çalıştırma
 
@@ -130,7 +205,7 @@ cd backend
 ./mvnw clean test
 ```
 
-Bu komut V1/V2 testlerinin yanı sıra V3'ün Testcontainers tabanlı entegrasyon testlerini de çalıştırır (bkz. [Testcontainers Testlerinin Çalıştırılması](#testcontainers-testlerinin-çalıştırılması)). Docker Desktop'ın çalışıyor olması gerekir.
+Docker Desktop'ın çalışıyor olması gerekir (bkz. [Testcontainers Testlerinin Çalıştırılması](#testcontainers-testlerinin-çalıştırılması)).
 
 ## Development Ortamında Frontend'i Çalıştırma
 
@@ -173,6 +248,13 @@ Backend, `application.properties`'teki şu varsayılanlarla `localhost:5432`'ye 
 | `DB_NAME` | Backend, PostgreSQL | `loginsight` | Veritabanı adı. |
 | `DB_USERNAME` | Backend, PostgreSQL | `loginsight` | Veritabanı kullanıcı adı. |
 | `DB_PASSWORD` | Backend, PostgreSQL | — | Veritabanı şifresi. Repo'da gerçek değer bulunmaz; `.env.example` yalnızca örnek gösterir. |
+| `ANALYSIS_EXECUTOR_CORE_POOL_SIZE` | Backend | `2` | Asenkron analiz thread havuzunun minimum boyutu. |
+| `ANALYSIS_EXECUTOR_MAX_POOL_SIZE` | Backend | `4` | Asenkron analiz thread havuzunun maksimum boyutu. |
+| `ANALYSIS_EXECUTOR_QUEUE_CAPACITY` | Backend | `50` | Thread havuzu dolduğunda bekleyebilecek maksimum iş sayısı. |
+| `ANALYSIS_EXECUTOR_THREAD_NAME_PREFIX` | Backend | `log-analysis-` | Oluşturulan thread'lerin isim öneki. |
+| `ANALYSIS_JOB_MAX_RETRY` | Backend | `3` | Bir job'ın maksimum retry sayısı. |
+| `ANALYSIS_JOB_PROGRESS_INTERVAL` | Backend | `100` | Progress/iptal kontrolünün kaç satırda bir yapılacağı. |
+| `ANALYSIS_TEMP_DIRECTORY` | Backend | `/tmp/log-insight` | Yüklenen dosyaların analiz tamamlanana kadar saklandığı geçici klasör. |
 
 `.env.example` dosyası (proje kökünde), gerçek değerler olmadan hangi değişkenlerin gerektiğini gösterir; gerçek `.env` dosyası `.gitignore` ile git'e dahil edilmez.
 
@@ -197,7 +279,7 @@ docker compose down
 
 ### Named Volume Davranışı
 
-PostgreSQL verisi `log-insight-postgres-data` adlı named volume'da saklanır. `docker compose down` ve ardından tekrar `docker compose up` yapıldığında veriler **korunur** (volume silinmez). Veritabanını tamamen sıfırlamak (tüm analiz geçmişini silmek) için:
+PostgreSQL verisi `log-insight-postgres-data` adlı named volume'da saklanır. `docker compose down` ve ardından tekrar `docker compose up` yapıldığında veriler **korunur** (volume silinmez). Veritabanını tamamen sıfırlamak (tüm analiz geçmişini ve job kayıtlarını silmek) için:
 
 ```bash
 docker compose down -v
@@ -214,7 +296,7 @@ docker compose down -v
 
 ## Endpoint'ler
 
-### Analiz Yapma
+### Analiz Yapma (senkron, V1'den beri)
 
 **POST** `/api/v1/logs/analyze`
 Content-Type: `multipart/form-data`
@@ -272,19 +354,51 @@ curl "http://localhost:8080/api/v1/analyses?page=0&size=20&sort=analyzedAt,desc&
 
 Cevap `content`, `page`, `size`, `totalElements`, `totalPages`, `first`, `last` alanlarını içerir.
 
-**GET** `/api/v1/analyses/{id}` — tek bir analizin detayını döner (dosya metadata'sı, tüm sayaçlar, en sık hatalar, analiz tarihi, işlem süresi). Kayıt yoksa `404 Not Found`.
+**GET** `/api/v1/analyses/{id}` — tek bir analizin detayını döner. Kayıt yoksa `404 Not Found`.
 
 **DELETE** `/api/v1/analyses/{id}` — analiz kaydını ve ilişkili en-sık-hata kayıtlarını siler. Başarılı silmede `204 No Content`, kayıt yoksa `404 Not Found`.
 
+### Analiz Job Endpoint'leri (V4)
+
+**POST** `/api/v1/analysis-jobs` — yeni bir asenkron analiz job'ı oluşturur, hemen (analiz beklemeden) cevap döner.
+Content-Type: `multipart/form-data`, form alanları: `file`, `analysisName` (zorunlu, 3-100 karakter, trim edilir)
+
+```bash
+curl -X POST -F "file=@backend/sample.log" -F "analysisName=Test Analizi" http://localhost:8080/api/v1/analysis-jobs
+```
+```json
+{
+  "jobId": "d1a86b2d-7747-4c58-9af5-c1b81c41b100",
+  "analysisName": "Test Analizi",
+  "status": "PENDING",
+  "progress": 0,
+  "createdAt": "2026-01-01T12:00:00Z"
+}
+```
+
+**GET** `/api/v1/analysis-jobs/{id}` — job'ın güncel durumunu ve tüm detaylarını döner. Kayıt yoksa `404 Not Found` (`JOB_NOT_FOUND`).
+
+**GET** `/api/v1/analysis-jobs` — sayfalı job listesi. Parametreler: `page`, `size`, `sort` (varsayılan `createdAt,desc`), `analysisName`, `fileName`, `status` (`PENDING`/`RUNNING`/`SUCCEEDED`/`FAILED`/`CANCELLED`).
+
+**POST** `/api/v1/analysis-jobs/{id}/cancel` — `PENDING` bir job'ı anında iptal eder; `RUNNING` bir job için iptal talebi oluşturur (bir sonraki kontrol noktasında işlenir). Geçersiz durumdaki bir job için `409 Conflict` (`INVALID_JOB_STATE`).
+
+**POST** `/api/v1/analysis-jobs/{id}/retry` — yalnızca `FAILED` bir job'ı tekrar `PENDING`'e alır (aynı job ID'siyle). Retry limiti aşılmışsa `409 Conflict` (`RETRY_LIMIT_EXCEEDED`).
+
 ## Frontend Geçmiş ve Detay Ekranları
 
-Uygulama iki ana görünüme sahiptir (üst kısımdaki sekmelerle geçiş yapılır):
-
-- **Yeni Analiz** — V1/V2'den beri var olan dosya yükleme ve analiz özeti ekranı.
-- **Analiz Geçmişi** — kayıtlı tüm analizlerin listesi. Her satırda dosya adı, analiz tarihi, dosya boyutu, toplam satır, ERROR sayısı, exception sayısı, işlem süresi ile birlikte bir **Detay** ve bir **Sil** butonu bulunur. Liste varsayılan olarak analiz tarihine göre azalan sıralıdır; sayfa altında önceki/sonraki sayfa butonları ve mevcut/toplam sayfa bilgisi gösterilir. Üstteki arama çubuğuyla dosya adına göre arama ve minimum ERROR sayısına göre filtreleme yapılabilir.
+- **Analiz Geçmişi** — kayıtlı tüm analizlerin listesi. Her satırda dosya adı, analiz tarihi, dosya boyutu, toplam satır, ERROR sayısı, exception sayısı, işlem süresi ile birlikte bir **Detay** ve bir **Sil** butonu bulunur. Sayfa altında önceki/sonraki sayfa butonları ve mevcut/toplam sayfa bilgisi gösterilir. Üstteki arama çubuğuyla dosya adına göre arama ve minimum ERROR sayısına göre filtreleme yapılabilir.
 - **Detay butonuna** basıldığında, o analizin tüm bilgileri (dosya metadata'sı, tüm sayaçlar, en sık hata mesajları tablosu) ayrı bir ekranda gösterilir.
 - **Sil butonuna** basıldığında önce bir onay penceresi açılır; onaylanırsa kayıt silinir, başarı mesajı gösterilir ve liste otomatik olarak yenilenir.
 - Liste; yükleniyor (loading), boş (empty state), hata (backend erişilemiyor veya beklenmeyen sunucu hatası) durumlarını ayrı ayrı, kullanıcı dostu şekilde ele alır.
+
+## Frontend Analiz İşleri Ekranları (V4)
+
+Uygulama artık üç ana görünüme sahip: **Yeni Analiz**, **Analiz İşleri**, **Analiz Geçmişi**.
+
+- **Yeni Analiz** artık senkron değil — kullanıcı bir analiz adı girip dosya seçtiğinde, bir job oluşturulur ve kullanıcı otomatik olarak **Analiz İşleri** sekmesindeki job takip ekranına yönlendirilir.
+- **Analiz İşleri listesi** — analiz adı, dosya adı, durum, progress, oluşturulma/başlama/tamamlanma zamanı, retry sayısı ve **Detay/İptal/Retry/Sonuç** butonlarını gösterir; butonlar job durumuna göre aktif/pasif olur (örn. yalnızca `FAILED` job'da Retry aktif, "Sonuç" yalnızca `SUCCEEDED` **ve** bağlı analiz sonucu hâlâ mevcutsa aktif). Analiz adına, dosya adına ve duruma göre filtrelenebilir.
+- **Job Detay ekranı** — tüm job bilgileri, `PENDING`/`RUNNING` durumunda bir progress bar, geçen süre, hata bilgisi (varsa, kullanıcı dostu çevrilmiş biçimde) ve `SUCCEEDED` job için "Sonucu Görüntüle" butonu (Analiz Geçmişi'ndeki detay ekranına yönlendirir; analiz sonucu ayrıca silinmişse bu buton görünmez).
+- **Polling** — job takip ekranı, job'ın durumunu her **2 saniyede bir** sorgular; job terminal bir duruma (`SUCCEEDED`/`FAILED`/`CANCELLED`) ulaşınca polling otomatik durur; ekran kapatılınca (component unmount) da temizlenir; backend'e ulaşılamazsa kullanıcıya bilgi verilir.
 
 ## Backend Testleri
 
@@ -293,19 +407,21 @@ cd backend
 ./mvnw clean test
 ```
 
-V1/V2'den gelen tüm testler (dosya validasyonu, log sayaçları, hata gruplama, Actuator health, standart hata formatı) korunmuştur. V3 ile eklenen test senaryoları:
-- Başarılı analiz sonucunun veritabanına kaydedilmesi ve en-sık-hata kayıtlarının analiz kaydına bağlanması
-- Kayıt başarısız olduğunda transaction'ın geri alınması (rollback)
-- Analiz geçmişinin sayfalı listelenmesi, dosya adına göre arama, minimum hata sayısına göre filtreleme
-- Analiz detayının getirilmesi ve olmayan bir ID için `404` dönülmesi
-- Analiz kaydının ve ilişkili hata kayıtlarının silinmesi
-- Liquibase migration'larının tabloları doğru şekilde oluşturduğunun doğrulanması
+V1/V2/V3'ten gelen tüm testler (dosya validasyonu, log sayaçları, hata gruplama, Actuator health, standart hata formatı, analiz geçmişi CRUD'u, Liquibase migration'ları) korunmuştur. V4 ile eklenen test senaryoları:
+- Analiz adı validasyonu (zorunlu, min/max uzunluk, trim edilerek kaydedilmesi)
+- Job'ın `PENDING` durumunda kaydedilmesi, `PENDING → RUNNING → SUCCEEDED`/`FAILED` geçişleri
+- Job progress değerinin arka planda güncellenmesi
+- Başarılı job'ın analiz kaydı oluşturması; başarısız/iptal edilen job'ın oluşturmaması
+- `PENDING` job'ın anında iptal edilmesi; `RUNNING` job için iptal talebinin oluşturulup arka planda işlenmesi
+- `SUCCEEDED` job'ın iptal edilememesi
+- `FAILED` job'ın retry edilmesi, retry limitinin uygulanması, `PENDING`/`RUNNING` job'ın retry edilememesi
+- Job listesinin pagination ve durum filtresiyle dönmesi
+- Uygulama başlangıcında `RUNNING` job'ların `FAILED`'a alınması ve sahipsiz geçici dosyaların temizlenmesi
+- `JobStateMachine`'in tüm durum geçiş kurallarının izole (veritabanına dokunmadan) test edilmesi
 
 ### Testcontainers Testlerinin Çalıştırılması
 
-Yukarıdaki veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker container'ında (Testcontainers ile) başlatarak çalışır — mock veya in-memory veritabanı kullanılmaz. Bunun için:
-- Docker Desktop (ya da WSL2 üzerinde Docker) çalışır durumda olmalı.
-- Ayrıca hiçbir manuel adım gerekmez; `./mvnw clean test` çalıştırıldığında container başlar ve JVM kapanınca (Testcontainers'ın Ryuk bileşeni tarafından) otomatik temizlenir.
+Veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker container'ında (Testcontainers ile) başlatarak çalışır — mock veya in-memory veritabanı kullanılmaz. Container, `AbstractIntegrationTest`'te "singleton container" deseniyle (JVM başına bir kez, elle) başlatılır ve tüm test sınıfları arasında paylaşılır. Bunun için Docker Desktop (ya da WSL2 üzerinde Docker) çalışır durumda olmalı; başka hiçbir manuel adım gerekmez.
 
 ## Frontend Testleri
 
@@ -314,11 +430,36 @@ cd frontend
 npm test
 ```
 
-V1/V2'den gelen tüm testler korunmuştur. V3 ile eklenen senaryolar: analiz geçmişi listesinin yüklenmesi, boş liste durumu, yükleniyor durumu, API hata durumu, sayfalama, dosya adına göre arama, detay ekranının açılması, silme onay penceresinin gösterilmesi ve silme sonrası listenin yenilenmesi. Testlerde gerçek backend yerine API mock'ları kullanılır.
+V1/V2/V3'ten gelen tüm testler korunmuştur. V4 ile eklenen senaryolar:
+- Analiz adı girilerek job oluşturma akışı, analiz adı boş/kısa/uzun bırakıldığında validation mesajı gösterilmesi, adın trim edilerek gönderilmesi
+- Job listesinin yüklenmesi, boş liste ve backend erişilemezlik durumları
+- Job durumuna göre İptal/Retry/Sonuç butonlarının aktif/pasif olması (`PENDING`, `FAILED`, `SUCCEEDED` senaryoları ayrı ayrı)
+- Job detay ekranında analiz adının, durumun, `RUNNING`'de progress bar'ın gösterilmesi (`SUCCEEDED`'da gösterilmemesi)
+- Yalnızca `FAILED` durumda "Tekrar Dene" butonunun gösterilmesi, `SUCCEEDED` job'dan "Sonucu Görüntüle" ile analiz detayına geçiş
+- Polling'in 2 saniyede bir tekrarlanması, terminal durumda durması, component unmount olunca temizlenmesi (`vi.useFakeTimers` ile)
+
+Testlerde gerçek backend yerine API mock'ları kullanılır. Not: Türkçe/İngilizce dil geçişi ve kalıcılığı yalnızca tarayıcıda elle doğrulanmıştır, ayrı otomatik testler yazılmamıştır (bkz. Bilinen Eksikler).
 
 ## Nginx Proxy Yapısının Kısa Açıklaması
 
 Development ortamında frontend (`5173`) ve backend (`8080`) farklı portlarda çalıştığı için, tarayıcı bunları farklı origin olarak görüyor ve CORS izni gerekiyor. Docker/production ortamında bu ihtiyacı ortadan kaldırmak için Nginx, hem frontend'in statik dosyalarını (`dist/` çıktısı) sunuyor hem de `/api/` ve `/actuator/` ile başlayan istekleri arka planda backend container'ına yönlendiriyor (reverse proxy). Böylece tarayıcı, tek bir origin'e (`localhost:3000`) konuşuyormuş gibi davranıyor, CORS'a gerek kalmıyor.
+
+## Türkçe ve İngilizce Dil Desteği
+
+Uygulama yalnızca Türkçe (`tr`, varsayılan) ve İngilizce (`en`) dillerini destekler; `i18next` + `react-i18next` ile yönetilir.
+
+### Çeviri Dosyalarının Yapısı
+```
+frontend/src/i18n/
+├── index.ts               # i18next kurulumu, localStorage'dan/varsayılan dilden başlatma
+└── locales/
+    ├── tr.json
+    └── en.json
+```
+
+- Kullanıcının seçtiği dil (Header'daki TR/EN butonları) `localStorage`'a (`log-insight-language`) yazılır; sayfa yenilendiğinde oradan okunur. Geçersiz/desteklenmeyen bir değer varsa Türkçe'ye düşülür.
+- Job durumları (`jobStatus` namespace'i) ve backend'in döndürdüğü tüm `errorCode`'lar (`errors` namespace'i) iki dilde de çevrilidir; frontend önce `errorCode`'a göre çeviri arar, bulamazsa backend'in ham `message` alanına düşer (`utils/apiErrorMessage.ts`).
+- Menü başlıkları, form etiketleri/validation mesajları, buton metinleri, tablo başlıkları, loading/empty-state mesajları, onay pencereleri dahil kullanıcıya görünen hiçbir metin component içine sabit yazılmaz — hepsi `t("namespace.key")` üzerinden gelir.
 
 ## Ekran Görüntüleri
 
@@ -340,89 +481,112 @@ Development ortamında frontend (`5173`) ve backend (`8080`) farklı portlarda �
 ### Silme Onay Penceresi
 ![Silme onayı](screenshots/delete-confirm.png)
 
+### Analiz İşleri Listesi (V4)
+![Analiz işleri listesi](screenshots/jobs-list.png)
+
+### Çalışan Job — Progress Ekranı (V4)
+![Çalışan job progress](screenshots/job-running-progress.png)
+
+### Başarısız Job Ekranı (V4)
+![Başarısız job](screenshots/job-failed.png)
+
+### Retry Akışı (V4)
+![Retry akışı](screenshots/job-retry.png)
+
+### Türkçe Arayüz (V4)
+![Türkçe arayüz](screenshots/ui-turkish.png)
+
+### İngilizce Arayüz (V4)
+![İngilizce arayüz](screenshots/ui-english.png)
+
 ## Bilinen Eksikler
 - Sürükle-bırak (drag-and-drop) desteği eklendi ancak farklı tarayıcılarda kapsamlı test edilmedi.
 - `mostFrequentErrors` listesinde üst sınır (örn. ilk 10) uygulanmıyor; çok sayıda benzersiz hata mesajı olan büyük dosyalarda liste uzun olabilir.
 - Frontend, backend health check'i sadece sayfa ilk yüklendiğinde kontrol ediyor; periyodik otomatik yenileme yapmıyor.
-- Analiz geçmişi listesinde toplu (birden fazla kaydı aynı anda) silme desteği yok; kayıtlar tek tek silinebiliyor.
+- Analiz geçmişi ve analiz işleri listelerinde toplu (birden fazla kaydı aynı anda) silme/iptal/retry desteği yok; kayıtlar tek tek işlenebiliyor.
+- Türkçe/İngilizce dil geçişi ve kalıcılığı için ayrı otomatik testler yazılmadı, yalnızca tarayıcıda elle doğrulandı.
+- `useJobPolling` hook'u, polling zaten bir hata mesajı gösteriyorken kullanıcı dil değiştirirse, ekrandaki mesajı hemen değil bir sonraki başarısız denemede yeni dile çevirir (bilinçli, küçük bir basitleştirme — bkz. kod içi yorum).
+- Job geçmişinde otomatik arşivleme/eskimiş kayıtları temizleme mekanizması yok; `analysis_job` tablosu süresiz büyür.
 
 ## Karşılaşılan Sorunlar ve Çözümleri
 
-### V3'e Özgü Sorunlar
+### V4'e Özgü Sorunlar
 
-- **Liquibase migration'ları hiç çalışmıyordu, tablolar oluşmuyordu:** `docker compose up` sonrası backend "Schema validation: missing table" hatasıyla çöküyordu ve loglarda "liquibase" kelimesi hiç geçmiyordu. Kök sebep: Spring Boot 4.x, Liquibase autoconfiguration'ını `liquibase-core`'dan ayrı, kendi modülüne (`spring-boot-liquibase`) taşımış; bu bağımlılık `pom.xml`'de eksikti, dolayısıyla Spring Boot bu autoconfiguration'ı bir aday olarak bile görmüyordu. `spring-boot-liquibase` bağımlılığı eklenerek çözüldü.
-- **Testcontainers, WSL2'de Docker'ı bulamıyordu:** `./mvnw test` sırasında "Could not find a valid Docker environment" hatası alınıyordu; `docker ps` komutu ise sorunsuz çalışıyordu. Kök sebep: Docker Desktop'ın yeni sürümü artık eski, versiyon-önekli API yollarını (`/v1.24/...`) desteklemiyor ve bu isteklere hata yerine boş bir "stub" cevap dönüyor — Testcontainers'ın kullandığı `docker-java` kütüphanesi de bağlantıyı test ederken tam bu eski önekle istek atıyordu. `src/test/resources/docker-java.properties` içine `api.version=1.55` eklenerek (Docker Desktop'ın gerçek API sürümü `curl --unix-socket /var/run/docker.sock http://localhost/version` ile doğrulandı) çözüldü.
-- **`./mvnw clean test` tüm testler birlikte çalıştırıldığında ilk testte `HikariPool` bağlantı zaman aşımı, ardından tüm diğer testlerde "Could not open JPA EntityManager" hatası:** Testler tek tek çalıştırıldığında sorunsuzdu, sadece hepsi birlikte çalıştırıldığında bozuluyordu. Kök sebep: `@Testcontainers` + `@Container` kombinasyonu, paylaşılan `static` PostgreSQL container'ını her test sınıfı bitince durduruyordu; bir sonraki sınıf container'ı yeniden başlatınca yeni bir port alıyordu, ama eski (artık ölü) porta bağlanmaya çalışan bağlantı havuzu durumu kalıyordu. Testcontainers'ın resmi "singleton container" desenine geçilerek (`@Testcontainers`/`@Container` kaldırılıp container `static { postgres.start(); }` ile elle, JVM başına bir kez başlatılarak) çözüldü.
-- **Analiz kaydı silinirken tarayıcıda `403 Forbidden` hatası:** Backend loglarında hiçbir hata görünmüyordu (istek controller'a hiç ulaşmıyordu). Kök sebep: `WebConfig.java`'daki CORS ayarında `allowedMethods` listesinde yalnızca `GET`, `POST`, `OPTIONS` vardı, `DELETE` eksikti — Spring'in CORS filtresi isteği controller'a ulaşmadan reddediyordu. `DELETE` metodunun listeye eklenmesiyle çözüldü.
+- **`AnalysisJobRunner`'da ilk çalıştırmada `ObjectOptimisticLockingFailureException`:** Job `RUNNING`'e çekilip kaydedildikten sonra, `save()`'in döndürdüğü güncel nesne bir değişkene geri atanmadığı için, sonraki her kaydetme denemesi "bayat" (eski version numaralı) bir kopyayla yapılıyordu. `job = analysisJobRepository.save(job);` şeklinde sonucun her zaman geri atanmasıyla çözüldü.
+- **Retry sonrası analiz tekrar çalıştırılamıyordu:** İlk tasarımda her bitiş senaryosunda (başarı/hata/iptal) geçici dosya siliniyordu; ama bu, `FAILED` bir job'ın retry'ı için gereken dosyayı da yok ediyordu. Çözüm: `FAILED` durumunda dosya silinmiyor, yalnızca `SUCCEEDED`/`CANCELLED` durumunda ve uygulama yeniden başlayınca (restart recovery) siliniyor.
+- **`cancelJob()` çağrısı `RUNNING` bir job için bazen sessizce etkisiz kalıyordu (job hiç `CANCELLED` olmuyordu):** Kanıt: kaydedilmiş loglarda `ObjectOptimisticLockingFailureException` görüldü — iptal isteği ile `AnalysisJobRunner`'ın periyodik progress kaydı aynı satırı aynı anda güncellemeye çalışıyordu. Çözüm: hem `cancelJob` hem `AnalysisJobRunner`'ın checkpoint'i, optimistic locking çakışmasında **kendi taze transaction'ında yeniden deneme** yapacak şekilde güncellendi (`@Lazy` self-injection ile proxy üzerinden çağrı, `@Transactional`'ın tek metoda hapsedilmemesi).
+- **Test sınıfının `@BeforeEach` temizliğinde de aynı türden optimistic locking hatası:** `deleteAll()`, hâlâ arka planda çalışan bir job'ın satırını "bayat version" ile silmeye çalışıyordu. `deleteAllInBatch()` (version kontrolü yapmayan toplu SQL `DELETE`) ile çözüldü.
+- **`JobsListView`'de "Specification must not be null" / "Other specification must not be null" hataları:** Üç filtrenin de boş olduğu durumda `Specification.where(null)` ve `.and(null)` bu Spring Data sürümünde reddediliyordu. Her zaman doğru (`cb.conjunction()`) bir başlangıç `Specification`'ı kullanıp, her filtreyi yalnızca `null` değilse `.and(...)` ile eklemek şeklinde çözüldü.
+- **Analiz kaydı silinirken `500 Internal Server Error` / foreign key ihlali:** `analysis_job.analysis_id` foreign key'ine V4'te herhangi bir `ON DELETE` kuralı tanımlanmamıştı — bir analiz sonucuna bağlı job varken o sonucu silmek PostgreSQL tarafından reddediliyordu. Yeni bir migration (`008`) ile foreign key `ON DELETE SET NULL` olarak yeniden oluşturuldu; job kaydı korunuyor, yalnızca `analysis_id` `NULL`'a düşüyor.
+- **Job listesindeki "Sonuç" butonu, analizi silinmiş `SUCCEEDED` job'lar için de aktif görünüyordu:** Liste özet DTO'sunda `analysisId` alanı hiç yoktu, buton yalnızca `status`'e bakıyordu. DTO'ya `analysisId` eklenip butonun `disabled` koşuluna `analysisId !== null` kontrolü de eklenerek çözüldü.
+- **`AnalysisJobService`'te derleme hataları (eksik `package` bildirimi, eksik alan tanımları, kendi kendine atanan `null` alan):** Elle yapılan düzenlemeler sırasında dosyanın başına `package` satırı eklenmeyi unutulmuş, bazı constructor parametreleri (`jobStateMachine`, `maxRetry`) alan olarak tanımlanmadan kullanılmış, bir parametre de (`analysisJobRunner`) constructor imzasından düşürülmüş ama gövdede hâlâ kullanılıyordu. Dosyanın ilgili kısımları tekrar gözden geçirilip tamamlanarak çözüldü.
 
-### V1/V2'den Devam Eden Sorunlar
+### V1/V2/V3'ten Devam Eden Sorunlar
 
-- **WSL'de npm'in Windows sürümüne yönlenmesi:** `npm create vite` komutu `ERR_INVALID_URL` hatası veriyordu. Kök sebep, bash'in `npm` komutunu daha önce çalıştırılan Windows npm'ine (`/mnt/c/Program Files/nodejs/npm`) "hash"lemiş olmasıydı. `hash -r` ile bash'in komut önbelleği temizlenerek doğru (Linux) npm'e yönlendirildi.
-- **Frontend ↔ Backend CORS hatası:** Tarayıcı konsolunda `No 'Access-Control-Allow-Origin' header` hatası alındı. Normal endpoint'ler için `WebConfig.java` ile CORS tanımlandı; ancak Spring Boot Actuator kendi ayrı CORS mekanizmasını kullandığından, `application.properties`'e ayrıca `management.endpoints.web.cors.*` ayarları eklenmesi gerekti.
-- **React Testing Library'de testler arası veri sızıntısı:** Ardışık testlerde "Found multiple elements" hatası alındı. Sebep, `vitest.config.ts`'de `globals` açık olmadığı için Testing Library'nin otomatik `cleanup` mekanizmasının devreye girmemesiydi. `src/test/setup.ts` içine elle `afterEach(() => cleanup())` eklenerek çözüldü.
-- **Postman Desktop Agent'ın sürekli çökmesi:** Windows Olay Görüntüleyicisi incelendiğinde `Postman Agent.exe`'nin `0x80000003` hata koduyla çöktüğü görüldü; güvenlik yazılımı/ağ ayarlarıyla ilgisiz olduğu anlaşıldı. Alternatif olarak Insomnia kullanılarak API manuel test edildi.
+- **Liquibase migration'ları hiç çalışmıyordu:** Spring Boot 4.x, Liquibase autoconfiguration'ını `liquibase-core`'dan ayrı, kendi modülüne (`spring-boot-liquibase`) taşımış; bu bağımlılık eksikti. Eklenerek çözüldü.
+- **Testcontainers, WSL2'de Docker'ı bulamıyordu:** Docker Desktop'ın yeni sürümü eski, versiyon-önekli API yollarını (`/v1.24/...`) desteklemiyor. `docker-java.properties` içine `api.version=1.55` eklenerek çözüldü.
+- **`./mvnw clean test` tüm testler birlikte çalıştırıldığında bozuluyordu:** `@Testcontainers`/`@Container`, paylaşılan container'ı her test sınıfı bitince durduruyordu. "Singleton container" desenine geçilerek çözüldü.
+- **Analiz kaydı silinirken `403 Forbidden`:** CORS ayarında `DELETE` metodu eksikti. Eklenerek çözüldü.
+- **WSL'de npm'in Windows sürümüne yönlenmesi:** `hash -r` ile bash'in komut önbelleği temizlenerek çözüldü.
+- **Frontend ↔ Backend CORS hatası (Actuator için ayrı):** `management.endpoints.web.cors.*` ayarları eklenerek çözüldü.
+- **React Testing Library'de testler arası veri sızıntısı:** `src/test/setup.ts` içine `afterEach(() => cleanup())` eklenerek çözüldü.
+- **Postman Desktop Agent'ın sürekli çökmesi:** Insomnia'ya geçilerek atlatıldı.
 
 ## Yapay Zekâ Kullanım Açıklaması
 
 **Kullanılan AI aracı:** Claude (Anthropic)
 
 **Yapay zekâdan hangi konularda destek alındığı:**
-- Backend'e Actuator, configuration-tabanlı dosya boyutu limiti, standart hata formatı ve CORS eklenmesi
-- React + TypeScript proje mimarisinin tasarımı (component ayrımı, servis katmanı, tip tanımları)
-- Docker multi-stage build ve Nginx reverse proxy yapılandırması
-- Veritabanı şeması tasarımı, Liquibase migration yapısı, JPA entity ilişkileri (cascade, orphanRemoval, foreign key)
-- Pagination, arama ve filtreleme mantığının (Spring Data `Specification` ile) tasarımı ve implementasyonu
-- Analiz geçmişi ve detay ekranları için frontend component'lerinin (HistoryView, Pagination, SearchFilterBar, AnalysisDetailView, DeleteConfirmDialog) tasarımı
-- Frontend ve backend test senaryolarının yazımı (Testcontainers dahil)
-- WSL/npm/Postman/Docker Desktop/Liquibase/Testcontainers ile ilgili ortam ve konfigürasyon sorunlarının kanıta dayalı olarak debug edilmesi
+- Backend'e Actuator, CORS, standart hata formatı, PostgreSQL/Liquibase entegrasyonu, analiz geçmişi endpoint'leri eklenmesi
+- V4'te: asenkron job mimarisinin tasarımı (thread pool, job lifecycle, streaming dosya okuma, iptal/retry, geçici dosya güvenliği, uygulama yeniden başlama davranışı)
+- React + TypeScript proje mimarisinin tasarımı, V4'te job takip arayüzü (polling dahil) ve TR/EN çeviri altyapısının kurulması
+- Docker multi-stage build, Nginx reverse proxy, Docker Compose environment variable yönetimi
+- Backend/frontend test senaryolarının yazımı (Testcontainers dahil)
+- Ortam/konfigürasyon sorunlarının (WSL/npm/Docker Desktop/Liquibase/Testcontainers/optimistic locking) kanıta dayalı olarak debug edilmesi
 
-**Veritabanı tasarımı için alınan destek:**
-- `log_analysis` / `frequent_error` tablo şeması ve aralarındaki foreign key ilişkisi, spec'te önerilen alan adları temel alınarak birlikte tasarlandı.
-- Hangi alanlarda index tutulacağına (`analyzed_at`, `file_name`, `error_count`) sorgu paternlerine (sıralama, arama, filtreleme) göre karar verildi.
+**Async yapı için alınan destek:**
+- "Log analizi doğrudan HTTP request thread'i içerisinde tamamlanmamalı" gereksinimi, `@Async` + ayrı bir `AnalysisJobRunner` sınıfı ile karşılandı; `AnalysisJobService` içine `@Async` metod eklemek yerine ayrı sınıfa çıkarıldı çünkü Spring'in proxy mekanizması, aynı sınıf içinden yapılan `this.metod()` çağrılarında `@Async`'i sessizce atlıyor.
 
-**Liquibase için kullanılan önemli promptlar:**
-- "Liquibase zorunlu olarak kullanılmalı, Hibernate tablo yapısını otomatik oluşturmamalı" gereksinimi doğrultusunda `spring.jpa.hibernate.ddl-auto=validate` ayarlandı ve tüm şema değişiklikleri changelog dosyalarına taşındı.
-- Liquibase'in beklenmedik şekilde hiç çalışmadığı (tablo oluşturmadığı) durumda, "kanıt topla, tahmin yürütme" yaklaşımıyla adım adım ilerlendi (bkz. Karşılaşılan Sorunlar) — kök sebep Spring Boot 4.x'in Liquibase autoconfiguration'ını ayrı bir modüle taşımış olmasıydı.
+**Thread pool configuration için kullanılan promptlar:**
+- "En az aşağıdaki değerler environment variable üzerinden değiştirilebilir olmalıdır" listesi doğrudan `AsyncConfig`'teki `@Value("${app.analysis-executor...}")` enjeksiyonlarına ve `docker-compose.yml`/`.env.example`'a yansıtıldı.
 
-**JPA ilişkileri için kullanılan önemli promptlar:**
-- "İlgili frequent error kayıtları da kontrollü şekilde silinmelidir" gereksinimi, `@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)` ile hem JPA hem veritabanı (`ON DELETE CASCADE`) seviyesinde karşılandı.
+**Job lifecycle için kullanılan promptlar:**
+- "Job durum geçişleri tek bir merkezi yapı üzerinden kontrol edilmelidir" gereksinimi `JobStateMachine` sınıfıyla karşılandı — durum kontrolü veritabanına hiç dokunmadan, izole test edilebilir saf mantık olarak tasarlandı.
 
-**Pagination ve filtreleme için kullanılan önemli promptlar:**
-- "Pagination ve filtreleme service katmanında yönetilmelidir" ve "controller içerisinde veritabanı erişimi yapılmamalıdır" gereksinimleri, `AnalysisHistoryService` içinde `Specification<LogAnalysisEntity>` kullanılarak, controller'ın yalnızca DTO/service çağrısı yaptığı bir katmanlamayla karşılandı.
+**Retry ve cancellation için kullanılan promptlar:**
+- "Aynı job iki kez eş zamanlı çalıştırılmamalıdır" gereksinimi, `JobStateMachine`'in yalnızca `FAILED` job'ların retry'ına izin vermesiyle yapısal olarak karşılandı.
+- "RUNNING job için iptal talebi oluşturulabilmelidir" gereksinimi `cancel_requested` bayrağı + `AnalysisJobRunner`'ın periyodik kontrolüyle (işbirlikçi/cooperative iptal) karşılandı; bu tasarımın arka plan thread'iyle aynı satırı aynı anda güncelleme riski taşıdığı, gerçek test sırasında (bkz. Karşılaşılan Sorunlar) ortaya çıktı ve optimistic-locking-retry deseniyle düzeltildi.
 
-**UI tasarımı için kullanılan önemli promptlar:**
-- "Frontend aşağıdaki bileşenlere ayrılabilir: App, Header, BackendStatus, FileUpload, AnalysisSummary, StatCard, FrequentErrorsTable, ErrorAlert, LoadingIndicator" şeklindeki spec maddesi doğrudan component yapısına dönüştürüldü.
-- "Backend'den dönen teknik hata mesajı doğrudan ve kontrolsüz biçimde kullanıcıya gösterilmemeli" gereksinimi, `LogAnalysisApiError` sınıfı ve `App.tsx`'teki hata ayrımı (`instanceof` kontrolü) ile karşılandı.
-- V3'te "Analiz Geçmişi bölümü eklenmelidir... en az iki ana görünüm" gereksinimi `NavigationTabs` component'iyle, "silme öncesinde kullanıcıdan onay alınmalıdır" gereksinimi `DeleteConfirmDialog` ile karşılandı.
+**Streaming dosya işleme için kullanılan promptlar:**
+- "Dosyanın tamamı gereksiz şekilde belleğe alınmamalıdır" gereksinimi, `BufferedReader` ile satır satır okuma ve `CountingInputStream` (dekoratör deseni) ile byte bazlı progress hesaplamasıyla karşılandı.
 
-**Docker yapılandırması için kullanılan önemli promptlar:**
-- "Backend Dockerfile: Multi-stage build kullanılmalı, runtime image mümkün olduğunca küçük olmalı" — bu doğrultuda `eclipse-temurin:21-jdk` (build) → `eclipse-temurin:21-jre` (runtime) ayrımı yapıldı.
-- "Nginx, /api ile başlayan istekleri backend servisine yönlendirebilir" — `nginx.conf`'taki `location /api/ { proxy_pass ... }` bloğu bu şekilde oluşturuldu.
-- "PostgreSQL servisi için named volume ve healthcheck tanımlanmalıdır" — `docker-compose.yml`'e `log-insight-postgres-data` named volume'u ve `pg_isready` tabanlı healthcheck eklendi.
+**Polling için kullanılan promptlar:**
+- "Önerilen polling aralığı: 2 saniye", "Job terminal duruma geldiğinde polling durmalıdır", "Component unmount olduğunda polling temizlenmelidir" maddeleri `useJobPolling` custom hook'unda, `setInterval`/`clearInterval` ve bir `ref` ile jobId takibi kullanılarak karşılandı.
+
+**Türkçe ve İngilizce çeviri yapısı için kullanılan promptlar:**
+- "Kullanıcıya görünen metinler component içerisine sabit yazılmamalıdır" gereksinimi doğrultusunda `i18next`/`react-i18next` kuruldu, tüm component'ler `t("namespace.key")` çağrılarına geçirildi.
+- "Frontend kullanıcıya gösterilecek hata mesajını mümkün olduğunca backend'in errorCode alanına göre seçmelidir" gereksinimi, `utils/apiErrorMessage.ts`'teki merkezi `translateApiError` fonksiyonuyla karşılandı.
 
 **Yapay zekânın ürettiği kodlarda yapılan manuel değişiklikler:**
-- Hata mesajı çıkarma mantığında baştaki `:` karakterinin temizlenmesi eklendi (V1'den beri süregelen bir düzeltme).
-- `ActuatorHealthTest`, ilk üretilen haliyle `TestRestTemplate` kullanıyordu, bu sınıf mevcut Spring Boot sürümünde bulunamadığı için `HttpClient` (Java'nın kendi standart kütüphanesi) kullanan bir versiyonla değiştirildi.
-- İlk üretilen `AbstractIntegrationTest`, `@Testcontainers`/`@Container` kullanıyordu; test-sınıfları-arası container yeniden başlatma sorunu keşfedilince, elle yönetilen "singleton container" desenine geçildi.
-- İlk üretilen `LiquibaseConfig.java` (elle tanımlanmış `SpringLiquibase` bean'i) sorunu çözmediği gibi, aslında JPA-Liquibase sıralama garantisini bozduğu için tamamen kaldırıldı; kök sebep bulununca (`spring-boot-liquibase` bağımlılığının eksikliği) buna hiç ihtiyaç kalmadı.
+- `AnalysisJobService`'e daha önce eksik bırakılan `package` bildirimi, alan tanımları ve constructor parametresi, sonraki mesajlarda tamamlandı.
+- `NewAnalysisFlow.tsx`'te ilk üretilen halde `useTranslation` hook'u çağrılmadan `t` kullanılmış; sonraki düzenlemede eklendi ve `validateAnalysisName` fonksiyonu `t`'ye erişebilmesi için component içine taşındı.
+- `DeleteConfirmDialog`'daki dosya adı vurgusu (`<strong>`), TR/EN cümle yapısındaki kelime sırası farkı nedeniyle kaldırıldı, interpolasyonlu tek bir çeviri cümlesine geçildi.
 
-**Hatalı veya projeye uygun olmadığı için reddedilen öneriler:**
-- `LogAnalysisControllerTest` için önerilen `@AutoConfigureMockMvc` tabanlı yaklaşım, projedeki Spring Boot sürümüyle derleme hatası verdiği için reddedildi; bunun yerine mevcut `standaloneSetup` + `@BeforeEach` yaklaşımı korundu.
-- Testcontainers/Docker bağlantı sorununda ilk denenen `DOCKER_API_VERSION` ortam değişkeni çözüm getirmedi (yanlış katmanda etkili olduğu anlaşıldı); kalıcı çözüm olarak `docker-java.properties` dosyası kullanıldı.
+**Reddedilen veya hatalı bulunan öneriler:**
+- İlk üretilen `AnalysisJobRunner`'ın her bitiş senaryosunda geçici dosyayı silmesi, retry akışını imkansız kıldığı fark edilince reddedildi; `FAILED` durumunda dosya saklanacak şekilde değiştirildi.
+- İlk denenen basit `catch { setErrorMessage(sabit metin) }` yaklaşımı, spec'in "errorCode'a göre mesaj seçilmeli" gereksinimini karşılamadığı için, merkezi `translateApiError` fonksiyonuna geçilerek reddedildi.
 
 **Yapay zekâdan alınan kodların nasıl test edildiği:**
-- Her backend değişikliğinden sonra `mvn clean test` ile otomatik testler, ayrıca `curl` ile manuel uçtan uca senaryolar (geçerli dosya, boş dosya, yanlış uzantı, boyut aşımı, analiz geçmişi endpoint'leri) çalıştırıldı.
-- Her frontend değişikliğinden sonra `npm test` ile otomatik testler, ayrıca tarayıcıdan (`localhost:5173` ve Docker'da `localhost:3000`) manuel olarak dosya yükleme/analiz, geçmiş listeleme, arama/filtreleme, detay görüntüleme ve silme akışları denendi.
-- Docker Compose kurulumu, `docker compose up --build` ile ayağa kaldırılıp hem `curl` hem tarayıcı üzerinden doğrulandı; PostgreSQL'e `psql` ile bağlanılarak tabloların (`\dt`) ve verilerin gerçekten oluştuğu/kalıcı olduğu (`down` + `up` sonrası) kontrol edildi.
-- Liquibase migration'larının doğru çalıştığı, hem uygulama loglarında hem `psql \dt` çıktısında tabloların görünmesiyle doğrulandı.
-- Testcontainers testleri, hem tek tek (`-Dtest=SınıfAdı`) hem tüm paket (`./mvnw clean test`) olarak, farklı ortam senaryolarında (Docker Desktop farklı sürümlerinde, docker-compose stack'i açık/kapalıyken) tekrar tekrar çalıştırılarak doğrulandı.
+- Her fazdan sonra `./mvnw clean test` / `npm test` ile otomatik testler; ayrıca `curl` ile job oluşturma/iptal/retry/listeleme endpoint'leri, tarayıcıda uçtan uca (analiz adı → job → progress → sonuç, iptal, retry, dil değişimi) manuel olarak denendi.
+- Concurrency (iptal ile progress güncellemesinin çakışması) gibi zamanlamaya duyarlı davranışlar, gerçek loglar incelenerek (tahminle değil, `ObjectOptimisticLockingFailureException` stack trace'i görülerek) teşhis edildi.
+- `docker compose up --build` ile tam ortamda, hem veri kalıcılığı (`down`/`up` sonrası) hem veri sıfırlama (`down -v`) davranışları ayrı ayrı doğrulandı.
 
-**V3 sırasında öğrenilen konular:**
-- Spring Data JPA'da `@OneToMany`, `cascade`, `orphanRemoval` ve bunların foreign key `ON DELETE CASCADE` ile ilişkisi
-- `@Transactional`'ın rollback davranışı ve transaction sınırlarının service katmanında tutulmasının önemi
-- Entity/DTO ayrımının neden gerekli olduğu (entity'nin dış katmana sızmaması)
-- Spring Data `Specification` ile dinamik, birleştirilebilir sorgu filtreleri yazımı
-- Liquibase changelog yapısı, changeSet/rollback mantığı ve Spring Boot'un otomatik konfigürasyon mekanizmasının (autoconfiguration) sürüm sürüm nasıl değişebileceği
-- Testcontainers'ın JUnit5 yaşam döngüsü yönetimi (`@Testcontainers`/`@Container`) ile "singleton container" deseni arasındaki fark ve bunun test-sınıfları-arası paylaşılan durum üzerindeki etkisi
-- Docker Desktop'ın iç API/soket yapısının (WSL2 üzerinde) nasıl işlediği ve bir istemci kütüphanesinin (docker-java) bunu yanlış yorumlamasının nasıl teşhis edileceği
-- Spring'in CORS filtresinin, isteği controller'a hiç ulaştırmadan (ve dolayısıyla loglara hiç düşürmeden) reddedebileceği
+**V4 sırasında öğrenilen konular:**
+- Asenkron işlem, HTTP request thread'i ile worker thread farkı, thread pool ve queue capacity kavramları
+- Spring'in `@Async`/`@Transactional` proxy mekanizması ve neden aynı sınıf içinden `this.metod()` çağrısının bu anotasyonları atladığı (self-invocation problemi), `@Lazy` self-injection ile çözümü
+- Optimistic locking (`@Version`), race condition'lar ve "yeniden dene" (retry-on-conflict) deseni
+- Job lifecycle / durum makinesi tasarımı, idempotency'nin retry ile ilişkisi
+- Cooperative cancellation (bir işi zorla değil, bayrakla nazikçe durdurma) mantığı
+- Graceful/relaunch senaryolarında yarım kalan işlerin ele alınması (restart recovery)
+- Streaming dosya okuma ve dekoratör deseni (`CountingInputStream`)
+- i18next ile çok dilli frontend mimarisi, çeviri anahtarı organizasyonu, backend hata kodlarının frontend'de merkezi çevirisi
