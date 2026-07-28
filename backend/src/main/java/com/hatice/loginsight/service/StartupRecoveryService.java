@@ -52,15 +52,17 @@ public class StartupRecoveryService {
             job.setErrorCode(RESTART_ERROR_CODE);
             job.setErrorMessage("Uygulama analiz sürerken yeniden başlatıldı");
             analysisJobRepository.save(job);
-
-            tempFileStorageService.delete(job.getId());
+            // Not: dosya BURADA silinmiyor — diğer FAILED job'larla aynı kural geçerli:
+            // bu job retry edilebileceği için dosyaya ihtiyaç kalabilir.
         }
     }
 
     private void cleanUpOrphanedTempFiles() {
-        Set<UUID> jobIdsExpectingFile = analysisJobRepository.findByStatus(JobStatus.PENDING).stream()
-                .map(AnalysisJobEntity::getId)
-                .collect(Collectors.toSet());
+        Set<UUID> jobIdsExpectingFile = new java.util.HashSet<>();
+        analysisJobRepository.findByStatus(JobStatus.PENDING)
+                .forEach(job -> jobIdsExpectingFile.add(job.getId()));
+        analysisJobRepository.findByStatus(JobStatus.FAILED)
+                .forEach(job -> jobIdsExpectingFile.add(job.getId()));
 
         List<UUID> storedFileIds = tempFileStorageService.listStoredJobIds();
         int deletedCount = 0;

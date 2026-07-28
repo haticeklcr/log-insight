@@ -126,7 +126,6 @@ public class AnalysisJobService {
         return job;
     }
 
-    @Transactional
     public AnalysisJobEntity retryJob(UUID jobId) {
         AnalysisJobEntity job = findJobOrThrow(jobId);
         jobStateMachine.assertCanBeRetried(job.getStatus());
