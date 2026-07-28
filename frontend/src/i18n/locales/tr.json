@@ -96,7 +96,8 @@
     "generic": "Analiz başarısız oldu."
   },
   "polling": {
-    "unreachable": "Backend servisine ulaşılamadı. İş durumu güncellenemiyor."
+    "unreachable": "Backend servisine ulaşılamadı. İş durumu güncellenemiyor.",
+    "jobNotFound": "Bu analiz işi artık bulunamıyor."
   },
   "common": {
     "loading": "Dosya analiz ediliyor...",
@@ -114,10 +115,12 @@
   },
   "searchFilterBar": {
     "fileNamePlaceholder": "Dosya adına göre ara",
+    "analysisNamePlaceholder": "Analiz adına göre ara",
     "minErrorPlaceholder": "Min. ERROR sayısı",
     "apply": "Uygula"
   },
   "historyTable": {
+    "analysisName": "Analiz Adı",
     "fileName": "Dosya Adı",
     "analyzedAt": "Analiz Tarihi",
     "fileSize": "Boyut",

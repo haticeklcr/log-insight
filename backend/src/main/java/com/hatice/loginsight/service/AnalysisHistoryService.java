@@ -29,11 +29,11 @@ public class AnalysisHistoryService {
 
     @Transactional(readOnly = true)
     public PagedResponse<AnalysisSummaryDto> listAnalyses(int page, int size, String sortField, String sortDirection,
-                                                           String fileName, Integer minErrorCount) {
+                                                           String fileName, String analysisName, Integer minErrorCount) {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortField);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Specification<LogAnalysisEntity> specification = buildSpecification(fileName, minErrorCount);
+        Specification<LogAnalysisEntity> specification = buildSpecification(fileName, analysisName, minErrorCount);
 
         Page<LogAnalysisEntity> entityPage = logAnalysisRepository.findAll(specification, pageable);
 
@@ -66,13 +66,19 @@ public class AnalysisHistoryService {
         logAnalysisRepository.deleteById(id);
     }
 
-    private Specification<LogAnalysisEntity> buildSpecification(String fileName, Integer minErrorCount) {
+    private Specification<LogAnalysisEntity> buildSpecification(String fileName, String analysisName, Integer minErrorCount) {
         Specification<LogAnalysisEntity> specification = (root, query, cb) -> cb.conjunction();
 
         if (fileName != null && !fileName.isBlank()) {
             String pattern = "%" + fileName.toLowerCase() + "%";
             specification = specification.and((root, query, cb) ->
                     cb.like(cb.lower(root.get("fileName")), pattern));
+        }
+
+        if (analysisName != null && !analysisName.isBlank()) {
+            String pattern = "%" + analysisName.toLowerCase() + "%";
+            specification = specification.and((root, query, cb) ->
+                    cb.like(cb.lower(root.get("analysisName")), pattern));
         }
 
         if (minErrorCount != null) {
@@ -87,6 +93,7 @@ public class AnalysisHistoryService {
         return new AnalysisSummaryDto(
                 entity.getId(),
                 entity.getFileName(),
+                entity.getAnalysisName(),
                 entity.getFileSize(),
                 entity.getAnalyzedAt(),
                 entity.getTotalLines(),
@@ -99,6 +106,7 @@ public class AnalysisHistoryService {
         AnalysisDetailDto dto = new AnalysisDetailDto();
         dto.setId(entity.getId());
         dto.setFileName(entity.getFileName());
+        dto.setAnalysisName(entity.getAnalysisName());
         dto.setFileSize(entity.getFileSize());
         dto.setAnalyzedAt(entity.getAnalyzedAt());
         dto.setProcessingDurationMs(entity.getProcessingDurationMs());

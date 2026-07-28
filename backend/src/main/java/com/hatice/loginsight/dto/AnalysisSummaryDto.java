@@ -6,6 +6,7 @@ public class AnalysisSummaryDto {
 
     private Long id;
     private String fileName;
+    private String analysisName;
     private long fileSize;
     private Instant analyzedAt;
     private int totalLines;
@@ -16,10 +17,11 @@ public class AnalysisSummaryDto {
     public AnalysisSummaryDto() {
     }
 
-    public AnalysisSummaryDto(Long id, String fileName, long fileSize, Instant analyzedAt, int totalLines,
-                               int errorCount, int exceptionCount, long processingDurationMs) {
+    public AnalysisSummaryDto(Long id, String fileName, String analysisName, long fileSize, Instant analyzedAt,
+                               int totalLines, int errorCount, int exceptionCount, long processingDurationMs) {
         this.id = id;
         this.fileName = fileName;
+        this.analysisName = analysisName;
         this.fileSize = fileSize;
         this.analyzedAt = analyzedAt;
         this.totalLines = totalLines;
@@ -42,6 +44,14 @@ public class AnalysisSummaryDto {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public String getAnalysisName() {
+        return analysisName;
+    }
+
+    public void setAnalysisName(String analysisName) {
+        this.analysisName = analysisName;
     }
 
     public long getFileSize() {

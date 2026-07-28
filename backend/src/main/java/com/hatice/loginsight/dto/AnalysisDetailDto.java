@@ -7,6 +7,7 @@ public class AnalysisDetailDto {
 
     private Long id;
     private String fileName;
+    private String analysisName;
     private long fileSize;
     private Instant analyzedAt;
     private long processingDurationMs;
@@ -34,6 +35,14 @@ public class AnalysisDetailDto {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public String getAnalysisName() {
+        return analysisName;
+    }
+
+    public void setAnalysisName(String analysisName) {
+        this.analysisName = analysisName;
     }
 
     public long getFileSize() {

@@ -15,6 +15,7 @@ export default function HistoryTable({ analyses, onViewDetail, onDelete }: Histo
     <table className={styles.table}>
       <thead>
         <tr>
+          <th className={styles.headerCell}>{t("historyTable.analysisName")}</th>
           <th className={styles.headerCell}>{t("historyTable.fileName")}</th>
           <th className={styles.headerCell}>{t("historyTable.analyzedAt")}</th>
           <th className={styles.headerCell}>{t("historyTable.fileSize")}</th>
@@ -28,6 +29,7 @@ export default function HistoryTable({ analyses, onViewDetail, onDelete }: Histo
       <tbody>
         {analyses.map((analysis) => (
           <tr key={analysis.id}>
+            <td className={styles.cell}>{analysis.analysisName ?? "—"}</td>
             <td className={styles.cell}>{analysis.fileName}</td>
             <td className={styles.cell}>{formatDateTime(analysis.analyzedAt)}</td>
             <td className={styles.cell}>{formatFileSize(analysis.fileSize)}</td>

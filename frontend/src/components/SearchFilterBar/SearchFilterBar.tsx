@@ -4,21 +4,29 @@ import { useTranslation } from "react-i18next";
 import styles from "./SearchFilterBar.module.css";
 
 interface SearchFilterBarProps {
-  onApply: (fileName: string, minErrorCount: string) => void;
+  onApply: (fileName: string, analysisName: string, minErrorCount: string) => void;
 }
 
 export default function SearchFilterBar({ onApply }: SearchFilterBarProps) {
   const { t } = useTranslation();
   const [fileName, setFileName] = useState("");
+  const [analysisName, setAnalysisName] = useState("");
   const [minErrorCount, setMinErrorCount] = useState("");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    onApply(fileName, minErrorCount);
+    onApply(fileName, analysisName, minErrorCount);
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
+      <input
+        type="text"
+        placeholder={t("searchFilterBar.analysisNamePlaceholder")}
+        value={analysisName}
+        onChange={(e) => setAnalysisName(e.target.value)}
+        className={styles.input}
+      />
       <input
         type="text"
         placeholder={t("searchFilterBar.fileNamePlaceholder")}

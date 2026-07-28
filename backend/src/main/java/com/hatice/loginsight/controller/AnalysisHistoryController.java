@@ -28,13 +28,14 @@ public class AnalysisHistoryController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "analyzedAt,desc") String sort,
             @RequestParam(required = false) String fileName,
+            @RequestParam(required = false) String analysisName,
             @RequestParam(required = false) Integer minErrorCount) {
 
         String[] sortParts = sort.split(",");
         String sortField = sortParts[0];
         String sortDirection = sortParts.length > 1 ? sortParts[1] : "desc";
 
-        return analysisHistoryService.listAnalyses(page, size, sortField, sortDirection, fileName, minErrorCount);
+        return analysisHistoryService.listAnalyses(page, size, sortField, sortDirection, fileName, analysisName, minErrorCount);
     }
 
     @GetMapping("/{id}")

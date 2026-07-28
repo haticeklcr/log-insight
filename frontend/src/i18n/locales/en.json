@@ -96,7 +96,8 @@
     "generic": "The analysis failed."
   },
   "polling": {
-    "unreachable": "Could not reach the backend service. The job status cannot be updated."
+    "unreachable": "Could not reach the backend service. The job status cannot be updated.",
+    "jobNotFound": "This analysis job could no longer be found."
   },
   "common": {
     "loading": "Analyzing file...",
@@ -114,10 +115,12 @@
   },
   "searchFilterBar": {
     "fileNamePlaceholder": "Search by file name",
+    "analysisNamePlaceholder": "Search by analysis name",
     "minErrorPlaceholder": "Min. ERROR count",
     "apply": "Apply"
   },
   "historyTable": {
+    "analysisName": "Analysis Name",
     "fileName": "File Name",
     "analyzedAt": "Analysis Date",
     "fileSize": "Size",

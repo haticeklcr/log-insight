@@ -54,6 +54,7 @@ export interface AnalysisHistoryParams {
   size: number;
   sort?: string;
   fileName?: string;
+  analysisName?: string;
   minErrorCount?: number;
 }
 
@@ -64,6 +65,9 @@ export async function fetchAnalysisHistory(params: AnalysisHistoryParams): Promi
   query.set("sort", params.sort ?? "analyzedAt,desc");
   if (params.fileName) {
     query.set("fileName", params.fileName);
+  }
+  if (params.analysisName) {
+    query.set("analysisName", params.analysisName);
   }
   if (params.minErrorCount !== undefined) {
     query.set("minErrorCount", String(params.minErrorCount));

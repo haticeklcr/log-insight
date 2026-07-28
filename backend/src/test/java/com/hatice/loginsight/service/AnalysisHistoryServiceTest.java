@@ -32,8 +32,13 @@ class AnalysisHistoryServiceTest extends AbstractIntegrationTest {
     }
 
     private LogAnalysisEntity createAnalysis(String fileName, int errorCount) {
+        return createAnalysis(fileName, null, errorCount);
+    }
+
+    private LogAnalysisEntity createAnalysis(String fileName, String analysisName, int errorCount) {
         LogAnalysisEntity entity = new LogAnalysisEntity();
         entity.setFileName(fileName);
+        entity.setAnalysisName(analysisName);
         entity.setFileSize(100);
         entity.setTotalLines(10);
         entity.setInfoCount(5);
@@ -51,7 +56,7 @@ class AnalysisHistoryServiceTest extends AbstractIntegrationTest {
         createAnalysis("first.log", 2);
         createAnalysis("second.log", 4);
 
-        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", null, null);
+        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", null, null, null);
 
         assertThat(response.getTotalElements()).isEqualTo(2);
         assertThat(response.getContent()).hasSize(2);
@@ -64,7 +69,18 @@ class AnalysisHistoryServiceTest extends AbstractIntegrationTest {
         createAnalysis("production.log", 2);
         createAnalysis("staging.log", 3);
 
-        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", "prod", null);
+        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", "prod", null, null);
+
+        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void filtersByAnalysisName() {
+        createAnalysis("a.log", "Ödeme Servisi Gece Logları", 2);
+        createAnalysis("b.log", "Kullanıcı Servisi Analizi", 3);
+
+        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", null, "ödeme", null);
 
         assertThat(response.getContent()).hasSize(1);
         assertThat(response.getTotalElements()).isEqualTo(1);
@@ -75,18 +91,19 @@ class AnalysisHistoryServiceTest extends AbstractIntegrationTest {
         createAnalysis("low-error.log", 1);
         createAnalysis("high-error.log", 10);
 
-        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", null, 5);
+        PagedResponse<?> response = analysisHistoryService.listAnalyses(0, 10, "analyzedAt", "desc", null, null, 5);
 
         assertThat(response.getTotalElements()).isEqualTo(1);
     }
 
     @Test
     void returnsAnalysisDetailById() {
-        LogAnalysisEntity saved = createAnalysis("detail.log", 2);
+        LogAnalysisEntity saved = createAnalysis("detail.log", "Test Analizi", 2);
 
         AnalysisDetailDto detail = analysisHistoryService.getAnalysisDetail(saved.getId());
 
         assertThat(detail.getFileName()).isEqualTo("detail.log");
+        assertThat(detail.getAnalysisName()).isEqualTo("Test Analizi");
         assertThat(detail.getMostFrequentErrors()).hasSize(1);
         assertThat(detail.getMostFrequentErrors().get(0).getMessage()).isEqualTo("Sample error");
     }

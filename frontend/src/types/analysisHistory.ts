@@ -3,6 +3,7 @@ import type { ErrorFrequency } from "./logAnalysis";
 export interface AnalysisSummary {
   id: number;
   fileName: string;
+  analysisName: string | null;
   fileSize: number;
   analyzedAt: string;
   totalLines: number;
@@ -14,6 +15,7 @@ export interface AnalysisSummary {
 export interface AnalysisDetail {
   id: number;
   fileName: string;
+  analysisName: string | null;
   fileSize: number;
   analyzedAt: string;
   processingDurationMs: number;

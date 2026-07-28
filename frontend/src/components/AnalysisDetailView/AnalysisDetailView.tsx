@@ -17,7 +17,8 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
       <button type="button" className={styles.backButton} onClick={onBack}>
         {t("analysisDetail.back")}
       </button>
-      <h2 className={styles.title}>{detail.fileName}</h2>
+      <h2 className={styles.title}>{detail.analysisName ?? detail.fileName}</h2>
+      <p className={styles.fileNameSubtitle}>{detail.fileName}</p>
       <div className={styles.meta}>
         <span>{formatFileSize(detail.fileSize)}</span>
         <span>{formatDateTime(detail.analyzedAt)}</span>

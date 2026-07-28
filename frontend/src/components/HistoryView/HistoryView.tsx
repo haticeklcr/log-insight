@@ -20,6 +20,7 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [fileNameFilter, setFileNameFilter] = useState("");
+  const [analysisNameFilter, setAnalysisNameFilter] = useState("");
   const [minErrorCountFilter, setMinErrorCountFilter] = useState<number | undefined>(undefined);
   const [data, setData] = useState<PagedResponse<AnalysisSummary> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,7 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
         page,
         size: PAGE_SIZE,
         fileName: fileNameFilter || undefined,
+        analysisName: analysisNameFilter || undefined,
         minErrorCount: minErrorCountFilter,
       });
       setData(response);
@@ -43,14 +45,15 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [page, fileNameFilter, minErrorCountFilter, t]);
+  }, [page, fileNameFilter, analysisNameFilter, minErrorCountFilter, t]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  function handleApplyFilters(fileName: string, minErrorCount: string) {
+  function handleApplyFilters(fileName: string, analysisName: string, minErrorCount: string) {
     setFileNameFilter(fileName);
+    setAnalysisNameFilter(analysisName);
     setMinErrorCountFilter(minErrorCount ? Number(minErrorCount) : undefined);
     setPage(0);
   }
