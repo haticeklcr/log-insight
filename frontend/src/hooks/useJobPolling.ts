@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchAnalysisJob } from "../services/analysisJobApi";
+import { LogAnalysisApiError } from "../services/logAnalysisApi";
 import type { AnalysisJobDetail, JobStatus } from "../types/analysisJob";
 
 const POLL_INTERVAL_MS = 2000;
@@ -20,12 +21,26 @@ export function useJobPolling(jobId: string | null) {
       const latest = await fetchAnalysisJob(currentJobId);
       setJob(latest);
       setErrorMessage(null);
-      if (TERMINAL_STATUSES.includes(latest.status) && timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      if (TERMINAL_STATUSES.includes(latest.status)) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      } else if (!timerRef.current) {
+        // Döngü daha önce (bir önceki terminal durumda) durmuştu — retry gibi bir
+        // işlemle job yeniden aktif hale geldiyse, polling'i burada yeniden başlatıyoruz.
+        timerRef.current = setInterval(poll, POLL_INTERVAL_MS);
       }
-    } catch {
-      setErrorMessage(t("polling.unreachable"));
+    } catch (error) {
+      if (error instanceof LogAnalysisApiError && error.errorCode === "JOB_NOT_FOUND") {
+        setErrorMessage(t("polling.jobNotFound"));
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      } else {
+        setErrorMessage(t("polling.unreachable"));
+      }
     }
   }, []);
 

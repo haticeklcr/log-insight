@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./App.module.css";
 import Header from "./components/Header/Header";
 import NavigationTabs from "./components/NavigationTabs/NavigationTabs";
@@ -13,9 +14,11 @@ import JobDetailView from "./components/JobDetailView/JobDetailView";
 import { fetchAnalysisDetail } from "./services/logAnalysisApi";
 import { cancelAnalysisJob, retryAnalysisJob } from "./services/analysisJobApi";
 import { useJobPolling } from "./hooks/useJobPolling";
+import { translateApiError } from "./utils/apiErrorMessage";
 import type { AnalysisDetail } from "./types/analysisHistory";
 
 export default function App() {
+  const { t } = useTranslation();
   const [view, setView] = useState<ViewMode>("new");
 
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -24,7 +27,12 @@ export default function App() {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobActionError, setJobActionError] = useState<string | null>(null);
   const { job: activeJob, errorMessage: pollingErrorMessage, refetch: refetchJob } = useJobPolling(activeJobId);
+
+  useEffect(() => {
+    setJobActionError(null);
+  }, [activeJobId]);
 
   useEffect(() => {
     if (detailId === null) {
@@ -54,8 +62,11 @@ export default function App() {
 
   async function handleCancelJob() {
     if (!activeJobId) return;
+    setJobActionError(null);
     try {
       await cancelAnalysisJob(activeJobId);
+    } catch (error) {
+      setJobActionError(translateApiError(error, t, "newAnalysis.backendUnreachable"));
     } finally {
       await refetchJob();
     }
@@ -63,8 +74,11 @@ export default function App() {
 
   async function handleRetryJob() {
     if (!activeJobId) return;
+    setJobActionError(null);
     try {
       await retryAnalysisJob(activeJobId);
+    } catch (error) {
+      setJobActionError(translateApiError(error, t, "newAnalysis.backendUnreachable"));
     } finally {
       await refetchJob();
     }
@@ -90,14 +104,17 @@ export default function App() {
             {!activeJob && !pollingErrorMessage && <LoadingIndicator />}
             {pollingErrorMessage && !activeJob && <ErrorAlert message={pollingErrorMessage} />}
             {activeJob && (
-              <JobDetailView
-                job={activeJob}
-                pollingErrorMessage={pollingErrorMessage}
-                onCancel={handleCancelJob}
-                onRetry={handleRetryJob}
-                onViewResult={handleViewResultFromJob}
-                onBack={() => setActiveJobId(null)}
-              />
+              <>
+                {jobActionError && <ErrorAlert message={jobActionError} />}
+                <JobDetailView
+                  job={activeJob}
+                  pollingErrorMessage={pollingErrorMessage}
+                  onCancel={handleCancelJob}
+                  onRetry={handleRetryJob}
+                  onViewResult={handleViewResultFromJob}
+                  onBack={() => setActiveJobId(null)}
+                />
+              </>
             )}
           </>
         )}
