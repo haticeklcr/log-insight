@@ -346,10 +346,11 @@ curl -X POST -F "file=@backend/sample.log" http://localhost:8080/api/v1/logs/ana
 | `size` | hayır (varsayılan `20`) | sayfa başına kayıt |
 | `sort` | hayır (varsayılan `analyzedAt,desc`) | `alan,yön` formatında sıralama |
 | `fileName` | hayır | dosya adına göre (büyük/küçük harf duyarsız, kısmi eşleşme) arama |
+| `analysisName` | hayır | analiz adına göre (büyük/küçük harf duyarsız, kısmi eşleşme) arama |
 | `minErrorCount` | hayır | bu sayı ve üzerinde hata içeren kayıtları filtreleme |
 
 ```bash
-curl "http://localhost:8080/api/v1/analyses?page=0&size=20&sort=analyzedAt,desc&fileName=app&minErrorCount=5"
+curl "http://localhost:8080/api/v1/analyses?page=0&size=20&sort=analyzedAt,desc&fileName=app&analysisName=odeme&minErrorCount=5"
 ```
 
 Cevap `content`, `page`, `size`, `totalElements`, `totalPages`, `first`, `last` alanlarını içerir.
@@ -386,7 +387,7 @@ curl -X POST -F "file=@backend/sample.log" -F "analysisName=Test Analizi" http:/
 
 ## Frontend Geçmiş ve Detay Ekranları
 
-- **Analiz Geçmişi** — kayıtlı tüm analizlerin listesi. Her satırda dosya adı, analiz tarihi, dosya boyutu, toplam satır, ERROR sayısı, exception sayısı, işlem süresi ile birlikte bir **Detay** ve bir **Sil** butonu bulunur. Sayfa altında önceki/sonraki sayfa butonları ve mevcut/toplam sayfa bilgisi gösterilir. Üstteki arama çubuğuyla dosya adına göre arama ve minimum ERROR sayısına göre filtreleme yapılabilir.
+- **Analiz Geçmişi** — kayıtlı tüm analizlerin listesi. Her satırda analiz adı (V4), dosya adı, analiz tarihi, dosya boyutu, toplam satır, ERROR sayısı, exception sayısı, işlem süresi ile birlikte bir **Detay** ve bir **Sil** butonu bulunur. Sayfa altında önceki/sonraki sayfa butonları ve mevcut/toplam sayfa bilgisi gösterilir. Üstteki arama çubuğuyla analiz adına göre (V4) ve dosya adına göre arama, minimum ERROR sayısına göre filtreleme yapılabilir.
 - **Detay butonuna** basıldığında, o analizin tüm bilgileri (dosya metadata'sı, tüm sayaçlar, en sık hata mesajları tablosu) ayrı bir ekranda gösterilir.
 - **Sil butonuna** basıldığında önce bir onay penceresi açılır; onaylanırsa kayıt silinir, başarı mesajı gösterilir ve liste otomatik olarak yenilenir.
 - Liste; yükleniyor (loading), boş (empty state), hata (backend erişilemiyor veya beklenmeyen sunucu hatası) durumlarını ayrı ayrı, kullanıcı dostu şekilde ele alır.
@@ -398,7 +399,7 @@ Uygulama artık üç ana görünüme sahip: **Yeni Analiz**, **Analiz İşleri**
 - **Yeni Analiz** artık senkron değil — kullanıcı bir analiz adı girip dosya seçtiğinde, bir job oluşturulur ve kullanıcı otomatik olarak **Analiz İşleri** sekmesindeki job takip ekranına yönlendirilir.
 - **Analiz İşleri listesi** — analiz adı, dosya adı, durum, progress, oluşturulma/başlama/tamamlanma zamanı, retry sayısı ve **Detay/İptal/Retry/Sonuç** butonlarını gösterir; butonlar job durumuna göre aktif/pasif olur (örn. yalnızca `FAILED` job'da Retry aktif, "Sonuç" yalnızca `SUCCEEDED` **ve** bağlı analiz sonucu hâlâ mevcutsa aktif). Analiz adına, dosya adına ve duruma göre filtrelenebilir.
 - **Job Detay ekranı** — tüm job bilgileri, `PENDING`/`RUNNING` durumunda bir progress bar, geçen süre, hata bilgisi (varsa, kullanıcı dostu çevrilmiş biçimde) ve `SUCCEEDED` job için "Sonucu Görüntüle" butonu (Analiz Geçmişi'ndeki detay ekranına yönlendirir; analiz sonucu ayrıca silinmişse bu buton görünmez).
-- **Polling** — job takip ekranı, job'ın durumunu her **2 saniyede bir** sorgular; job terminal bir duruma (`SUCCEEDED`/`FAILED`/`CANCELLED`) ulaşınca polling otomatik durur; ekran kapatılınca (component unmount) da temizlenir; backend'e ulaşılamazsa kullanıcıya bilgi verilir.
+- **Polling** — job takip ekranı, job'ın durumunu her **2 saniyede bir** sorgular; job terminal bir duruma (`SUCCEEDED`/`FAILED`/`CANCELLED`) ulaşınca polling otomatik durur, retry ile job yeniden aktif hale gelirse otomatik yeniden başlar; ekran kapatılınca (component unmount) da temizlenir; backend'e ulaşılamazsa ya da job artık bulunamıyorsa (silinmişse) kullanıcıya ayrı, anlaşılır mesajlar gösterilir. Geçersiz bir durumda iptal/retry denenirse (örn. zaten tamamlanmış bir job, ya da retry limiti dolmuş bir job), backend'in döndüğü hata kodu çevrilip ekranda gösterilir.
 
 ## Backend Testleri
 
@@ -418,6 +419,10 @@ V1/V2/V3'ten gelen tüm testler (dosya validasyonu, log sayaçları, hata grupla
 - Job listesinin pagination ve durum filtresiyle dönmesi
 - Uygulama başlangıcında `RUNNING` job'ların `FAILED`'a alınması ve sahipsiz geçici dosyaların temizlenmesi
 - `JobStateMachine`'in tüm durum geçiş kurallarının izole (veritabanına dokunmadan) test edilmesi
+- Gerçek bir analiz hatasının (I/O hatası) `RUNNING → FAILED` geçişini tetiklediğinin ve analiz kaydı oluşturmadığının doğrulanması
+- Başarılı bir job'ın geçici dosyasının gerçekten silindiğinin doğrulanması
+- Retry limiti kesin olarak dolduğunda geçici dosyanın da silindiğinin doğrulanması
+- Liquibase migration testinin `analysis_job` tablosunu ve `log_analysis.analysis_name` sütununu da kapsaması
 
 ### Testcontainers Testlerinin Çalıştırılması
 
@@ -438,7 +443,7 @@ V1/V2/V3'ten gelen tüm testler korunmuştur. V4 ile eklenen senaryolar:
 - Yalnızca `FAILED` durumda "Tekrar Dene" butonunun gösterilmesi, `SUCCEEDED` job'dan "Sonucu Görüntüle" ile analiz detayına geçiş
 - Polling'in 2 saniyede bir tekrarlanması, terminal durumda durması, component unmount olunca temizlenmesi (`vi.useFakeTimers` ile)
 
-Testlerde gerçek backend yerine API mock'ları kullanılır. Not: Türkçe/İngilizce dil geçişi ve kalıcılığı yalnızca tarayıcıda elle doğrulanmıştır, ayrı otomatik testler yazılmamıştır (bkz. Bilinen Eksikler).
+Testlerde gerçek backend yerine API mock'ları kullanılır. Ayrıca: Türkçe/İngilizce dil seçimi ve kalıcılığı (`LanguageSwitcher.test.tsx`, `i18n/index.test.ts`), job durumlarının iki dilde gösterimi (`JobStatusBadge.test.tsx`) ve API hata kodlarının iki dilde çevrilmesi/fallback davranışı (`utils/apiErrorMessage.test.ts`) ayrı, otomatik testlerle doğrulanmıştır.
 
 ## Nginx Proxy Yapısının Kısa Açıklaması
 
@@ -504,7 +509,6 @@ frontend/src/i18n/
 - `mostFrequentErrors` listesinde üst sınır (örn. ilk 10) uygulanmıyor; çok sayıda benzersiz hata mesajı olan büyük dosyalarda liste uzun olabilir.
 - Frontend, backend health check'i sadece sayfa ilk yüklendiğinde kontrol ediyor; periyodik otomatik yenileme yapmıyor.
 - Analiz geçmişi ve analiz işleri listelerinde toplu (birden fazla kaydı aynı anda) silme/iptal/retry desteği yok; kayıtlar tek tek işlenebiliyor.
-- Türkçe/İngilizce dil geçişi ve kalıcılığı için ayrı otomatik testler yazılmadı, yalnızca tarayıcıda elle doğrulandı.
 - `useJobPolling` hook'u, polling zaten bir hata mesajı gösteriyorken kullanıcı dil değiştirirse, ekrandaki mesajı hemen değil bir sonraki başarısız denemede yeni dile çevirir (bilinçli, küçük bir basitleştirme — bkz. kod içi yorum).
 - Job geçmişinde otomatik arşivleme/eskimiş kayıtları temizleme mekanizması yok; `analysis_job` tablosu süresiz büyür.
 
