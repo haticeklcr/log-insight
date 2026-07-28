@@ -9,7 +9,7 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = "tr";
 
 const LANGUAGE_STORAGE_KEY = "log-insight-language";
 
-function resolveInitialLanguage(): SupportedLanguage {
+export function resolveInitialLanguage(): SupportedLanguage {
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
   if (stored && (SUPPORTED_LANGUAGES as readonly string[]).includes(stored)) {
     return stored as SupportedLanguage;
