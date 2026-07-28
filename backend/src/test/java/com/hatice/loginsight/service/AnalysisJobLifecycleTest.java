@@ -42,6 +42,12 @@ class AnalysisJobLifecycleTest extends AbstractIntegrationTest {
     @Autowired
     private LogAnalysisRepository logAnalysisRepository;
 
+    @Autowired
+    private TempFileStorageService tempFileStorageService;
+
+    @Autowired
+    private AnalysisJobRunner analysisJobRunner;
+
     @BeforeEach
     void cleanUp() {
         analysisJobRepository.deleteAllInBatch();
@@ -251,6 +257,28 @@ class AnalysisJobLifecycleTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void retryLimitExceededDeletesTempFile() throws Exception {
+        AnalysisJobEntity job = new AnalysisJobEntity();
+        job.setAnalysisName("Limit Temizlik Testi");
+        job.setFileName("application.log");
+        job.setFileSize(10);
+        job.setStatus(JobStatus.FAILED);
+        job.setProgress(0);
+        job.setRetryCount(3);
+        job.setCreatedAt(Instant.now());
+        job.setCompletedAt(Instant.now());
+        job.setCancelRequested(false);
+        AnalysisJobEntity saved = analysisJobRepository.save(job);
+
+        tempFileStorageService.store(saved.getId(), sampleFile());
+        assertThat(tempFileStorageService.exists(saved.getId())).isTrue();
+
+        assertThrows(JobRetryLimitExceededException.class, () -> analysisJobService.retryJob(saved.getId()));
+
+        assertThat(tempFileStorageService.exists(saved.getId())).isFalse();
+    }
+
+    @Test
     void listJobsSupportsPagination() {
         analysisJobService.createJob(sampleFile(), "Analiz Bir");
         analysisJobService.createJob(sampleFile(), "Analiz Iki");
@@ -262,6 +290,44 @@ class AnalysisJobLifecycleTest extends AbstractIntegrationTest {
         assertThat(page.getContent()).hasSize(2);
         assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(page.getTotalPages()).isEqualTo(2);
+    }
+
+    
+
+    @Test
+    void realAnalysisFailureDoesNotCreateAnalysisRecord() throws Exception {
+        AnalysisJobEntity job = new AnalysisJobEntity();
+        job.setAnalysisName("Gercek Hata Testi");
+        job.setFileName("bozuk.log");
+        job.setFileSize(10);
+        job.setStatus(JobStatus.RUNNING);
+        job.setProgress(0);
+        job.setRetryCount(0);
+        job.setCreatedAt(Instant.now());
+        job.setStartedAt(Instant.now());
+        job.setCancelRequested(false);
+        AnalysisJobEntity saved = analysisJobRepository.save(job);
+
+        // Dosya diskte hiç yok (hiç store edilmedi) — analiz sırasında IOException
+        // fırlaması bekleniyor, bu da gerçek bir "RUNNING -> FAILED" senaryosu.
+        analysisJobRunner.runAnalysis(saved.getId());
+
+        AnalysisJobEntity failed = awaitStatus(saved.getId(), JobStatus.FAILED);
+
+        assertThat(failed.getStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(failed.getErrorCode()).isEqualTo("ANALYSIS_IO_ERROR");
+        assertThat(failed.getAnalysisId()).isNull();
+        assertThat(logAnalysisRepository.count()).isZero();
+    }
+
+    @Test
+    void successfulJobDeletesItsTempFile() {
+        AnalysisJobEntity job = analysisJobService.createJob(sampleFile(), "Temizlik Testi");
+
+        AnalysisJobEntity finished = awaitStatus(job.getId(), JobStatus.SUCCEEDED);
+
+        assertThat(finished.getStatus()).isEqualTo(JobStatus.SUCCEEDED);
+        assertThat(tempFileStorageService.exists(job.getId())).isFalse();
     }
 
     @Test

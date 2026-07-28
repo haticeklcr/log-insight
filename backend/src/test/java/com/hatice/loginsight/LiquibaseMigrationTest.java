@@ -28,6 +28,12 @@ class LiquibaseMigrationTest extends AbstractIntegrationTest {
             try (ResultSet tables = metaData.getTables(null, null, "frequent_error", null)) {
                 assertThat(tables.next()).isTrue();
             }
+            try (ResultSet tables = metaData.getTables(null, null, "analysis_job", null)) {
+                assertThat(tables.next()).isTrue();
+            }
+            try (ResultSet columns = metaData.getColumns(null, null, "log_analysis", "analysis_name")) {
+                assertThat(columns.next()).isTrue();
+            }
         }
     }
 }

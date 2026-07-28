@@ -131,6 +131,9 @@ public class AnalysisJobService {
         jobStateMachine.assertCanBeRetried(job.getStatus());
 
         if (job.getRetryCount() >= maxRetry) {
+            // Retry limiti kesin olarak dolduğu için bu job bir daha asla
+            // çalıştırılamayacak — geçici dosyaya artık hiç ihtiyaç kalmıyor.
+            tempFileStorageService.delete(job.getId());
             throw new JobRetryLimitExceededException(
                     "Maksimum retry sayısına (" + maxRetry + ") ulaşıldı");
         }
