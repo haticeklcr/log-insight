@@ -1,0 +1,4 @@
+203.0.113.5 - - [01/Jan/2026:12:30:15 +0300] "GET /index.html HTTP/1.1" 200 1024 "https://example.com/" "Mozilla/5.0"
+203.0.113.6 - - [01/Jan/2026:12:30:16 +0300] "GET /api/orders HTTP/1.1" 200 512 "-" "curl/8.4.0"
+203.0.113.7 - - [01/Jan/2026:12:30:17 +0300] "POST /api/payment HTTP/1.1" 500 128 "https://example.com/checkout" "Mozilla/5.0"
+203.0.113.8 - - [01/Jan/2026:12:30:18 +0300] "GET /missing HTTP/1.1" 404 0 "-" "Mozilla/5.0"s
