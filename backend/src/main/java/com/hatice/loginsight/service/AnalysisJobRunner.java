@@ -1,10 +1,33 @@
 package com.hatice.loginsight.service;
 
+import com.hatice.loginsight.entity.AnalysisHttpMethodStatEntity;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
+import com.hatice.loginsight.entity.AnalysisLoggerStatEntity;
+import com.hatice.loginsight.entity.AnalysisStatusCodeStatEntity;
+import com.hatice.loginsight.entity.AnalysisThreadStatEntity;
 import com.hatice.loginsight.entity.FrequentErrorEntity;
 import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.entity.LogAnalysisEntity;
+import com.hatice.loginsight.exception.LogFormatCouldNotBeDetectedException;
+import com.hatice.loginsight.exception.UnsupportedFilterForParserException;
+import com.hatice.loginsight.parser.ExceptionInfoExtractor;
+import com.hatice.loginsight.parser.LogFormat;
+import com.hatice.loginsight.parser.LogFormatDetectionResult;
+import com.hatice.loginsight.parser.LogFormatDetector;
+import com.hatice.loginsight.parser.LogMessageNormalizer;
+import com.hatice.loginsight.parser.LogParser;
+import com.hatice.loginsight.parser.LogParserFactory;
+import com.hatice.loginsight.parser.LogRecordGroup;
+import com.hatice.loginsight.parser.MultilineExceptionAggregator;
+import com.hatice.loginsight.parser.MultilineExceptionInfo;
+import com.hatice.loginsight.parser.ParsedLogEntry;
+import com.hatice.loginsight.parser.SensitiveDataMasker;
+import com.hatice.loginsight.repository.AnalysisHttpMethodStatRepository;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
+import com.hatice.loginsight.repository.AnalysisLoggerStatRepository;
+import com.hatice.loginsight.repository.AnalysisStatusCodeStatRepository;
+import com.hatice.loginsight.repository.AnalysisThreadStatRepository;
+import com.hatice.loginsight.repository.AnalysisTimelineStatRepository;
 import com.hatice.loginsight.repository.LogAnalysisRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,16 +56,68 @@ public class AnalysisJobRunner {
     private final AnalysisJobRepository analysisJobRepository;
     private final LogAnalysisRepository logAnalysisRepository;
     private final TempFileStorageService tempFileStorageService;
+    private final LogParserFactory parserFactory;
+    private final LogFormatDetector formatDetector;
+    private final SensitiveDataMasker sensitiveDataMasker;
+    private final LogMessageNormalizer logMessageNormalizer;
+    private final ExceptionInfoExtractor exceptionInfoExtractor;
+    private final AnalysisLoggerStatRepository loggerStatRepository;
+    private final AnalysisThreadStatRepository threadStatRepository;
+    private final AnalysisStatusCodeStatRepository statusCodeStatRepository;
+    private final AnalysisHttpMethodStatRepository httpMethodStatRepository;
+    private final AnalysisTimelineStatRepository timelineStatRepository;
+
     private final int progressInterval;
+    private final int maxStackTraceLines;
+    private final int maxLogLineLength;
+    private final int maxDistinctLoggers;
+    private final int maxDistinctErrorGroups;
+    private final int maxTimelineBuckets;
+    private final int maxUnparsedLinePercentage;
+    private final int formatConfidenceThreshold;
 
     public AnalysisJobRunner(AnalysisJobRepository analysisJobRepository,
                               LogAnalysisRepository logAnalysisRepository,
                               TempFileStorageService tempFileStorageService,
-                              @Value("${app.analysis-job.progress-interval}") int progressInterval) {
+                              LogParserFactory parserFactory,
+                              LogFormatDetector formatDetector,
+                              SensitiveDataMasker sensitiveDataMasker,
+                              LogMessageNormalizer logMessageNormalizer,
+                              ExceptionInfoExtractor exceptionInfoExtractor,
+                              AnalysisLoggerStatRepository loggerStatRepository,
+                              AnalysisThreadStatRepository threadStatRepository,
+                              AnalysisStatusCodeStatRepository statusCodeStatRepository,
+                              AnalysisHttpMethodStatRepository httpMethodStatRepository,
+                              AnalysisTimelineStatRepository timelineStatRepository,
+                              @Value("${app.analysis-job.progress-interval}") int progressInterval,
+                              @Value("${app.log-parsing.max-stack-trace-lines}") int maxStackTraceLines,
+                              @Value("${app.log-parsing.max-log-line-length}") int maxLogLineLength,
+                              @Value("${app.log-parsing.max-distinct-loggers}") int maxDistinctLoggers,
+                              @Value("${app.log-parsing.max-distinct-error-groups}") int maxDistinctErrorGroups,
+                              @Value("${app.log-parsing.max-timeline-buckets}") int maxTimelineBuckets,
+                              @Value("${app.log-parsing.max-unparsed-line-percentage}") int maxUnparsedLinePercentage,
+                              @Value("${app.log-format-detection.confidence-threshold}") int formatConfidenceThreshold) {
         this.analysisJobRepository = analysisJobRepository;
         this.logAnalysisRepository = logAnalysisRepository;
         this.tempFileStorageService = tempFileStorageService;
+        this.parserFactory = parserFactory;
+        this.formatDetector = formatDetector;
+        this.sensitiveDataMasker = sensitiveDataMasker;
+        this.logMessageNormalizer = logMessageNormalizer;
+        this.exceptionInfoExtractor = exceptionInfoExtractor;
+        this.loggerStatRepository = loggerStatRepository;
+        this.threadStatRepository = threadStatRepository;
+        this.statusCodeStatRepository = statusCodeStatRepository;
+        this.httpMethodStatRepository = httpMethodStatRepository;
+        this.timelineStatRepository = timelineStatRepository;
         this.progressInterval = progressInterval;
+        this.maxStackTraceLines = maxStackTraceLines;
+        this.maxLogLineLength = maxLogLineLength;
+        this.maxDistinctLoggers = maxDistinctLoggers;
+        this.maxDistinctErrorGroups = maxDistinctErrorGroups;
+        this.maxTimelineBuckets = maxTimelineBuckets;
+        this.maxUnparsedLinePercentage = maxUnparsedLinePercentage;
+        this.formatConfidenceThreshold = formatConfidenceThreshold;
     }
 
     @Async("analysisTaskExecutor")
@@ -60,14 +135,73 @@ public class AnalysisJobRunner {
         Path filePath = tempFileStorageService.resolve(jobId);
 
         try {
-            long totalBytes = Files.size(filePath);
+            List<String> sampleLines = formatDetector.collectSampleLines(filePath, formatDetector.getDefaultSampleSize());
 
-            int totalLines = 0;
-            int infoCount = 0;
-            int warningCount = 0;
-            int errorCount = 0;
-            int exceptionCount = 0;
-            Map<String, Integer> errorMessageCounts = new LinkedHashMap<>();
+            LogFormat requestedFormat = parseRequestedFormat(job.getRequestedParserType());
+            LogFormat selectedFormat;
+            Integer formatConfidence = null;
+            Integer sampleSize = null;
+            Integer matchedSampleCount = null;
+
+            if (requestedFormat == LogFormat.AUTO) {
+                LogFormatDetectionResult detectionResult;
+                try {
+                    detectionResult = formatDetector.detect(sampleLines);
+                } catch (LogFormatCouldNotBeDetectedException e) {
+                    handleFailure(job, "LOG_FORMAT_COULD_NOT_BE_DETECTED", e.getMessage());
+                    return;
+                }
+                selectedFormat = detectionResult.getDetectedFormat();
+                formatConfidence = detectionResult.getFormatConfidence();
+                sampleSize = detectionResult.getSampleSize();
+                matchedSampleCount = detectionResult.getMatchedSampleCount();
+            } else {
+                selectedFormat = requestedFormat;
+                if (!sampleLines.isEmpty()) {
+                    LogParser candidateParser = parserFactory.getParser(selectedFormat);
+                    int matched = 0;
+                    for (String sampleLine : sampleLines) {
+                        if (candidateParser.canParse(sampleLine)) {
+                            matched++;
+                        }
+                    }
+                    int confidence = (int) Math.round((matched * 100.0) / sampleLines.size());
+                    if (confidence < formatConfidenceThreshold) {
+                        handleFailure(job, "SELECTED_PARSER_CANNOT_PARSE_FILE",
+                                "Secilen parser (" + selectedFormat + ") dosya icerigiyle uyumlu degil, guven skoru: " + confidence);
+                        return;
+                    }
+                    formatConfidence = confidence;
+                    sampleSize = sampleLines.size();
+                    matchedSampleCount = matched;
+                }
+            }
+
+            LogParser selectedParser = parserFactory.getParser(selectedFormat);
+
+            try {
+                AnalysisFilterSupport.validate(
+                        selectedFormat,
+                        isSet(job.getFilterLogger()),
+                        isSet(job.getFilterThread()),
+                        isSet(job.getFilterStatusCodes()),
+                        isSet(job.getFilterHttpMethods()),
+                        isSet(job.getFilterPathContains()));
+            } catch (UnsupportedFilterForParserException e) {
+                handleFailure(job, "UNSUPPORTED_FILTER_FOR_PARSER", e.getMessage());
+                return;
+            }
+
+            job.setRequestedParserType(requestedFormat.name());
+            job.setDetectedLogFormat(selectedFormat.name());
+            job = analysisJobRepository.save(job);
+
+            JobFilterCriteria filterCriteria = JobFilterCriteria.from(job);
+
+            long totalBytes = Files.size(filePath);
+            AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(maxDistinctLoggers, maxDistinctErrorGroups);
+            LogTimelineAggregator timelineAggregator = new LogTimelineAggregator(maxTimelineBuckets);
+            MultilineExceptionAggregator aggregator = new MultilineExceptionAggregator(selectedParser, maxStackTraceLines);
 
             try (CountingInputStream countingStream = new CountingInputStream(Files.newInputStream(filePath));
                  BufferedReader reader = new BufferedReader(
@@ -75,29 +209,16 @@ public class AnalysisJobRunner {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    totalLines++;
+                    accumulator.incrementTotalLines();
 
-                    if (line.contains("ERROR")) {
-                        errorCount++;
-                        int idx = line.indexOf("ERROR");
-                        String message = line.substring(idx + "ERROR".length()).trim();
-                        if (message.startsWith(":")) {
-                            message = message.substring(1).trim();
-                        }
-                        if (!message.isEmpty()) {
-                            errorMessageCounts.merge(message, 1, Integer::sum);
-                        }
-                    } else if (line.contains("WARN")) {
-                        warningCount++;
-                    } else if (line.contains("INFO")) {
-                        infoCount++;
+                    String boundedLine = line.length() > maxLogLineLength ? line.substring(0, maxLogLineLength) : line;
+
+                    Optional<LogRecordGroup> completed = aggregator.offer(boundedLine);
+                    if (completed.isPresent()) {
+                        processGroup(completed.get(), selectedParser, accumulator, timelineAggregator, filterCriteria);
                     }
 
-                    if (line.contains("Exception")) {
-                        exceptionCount++;
-                    }
-
-                    if (totalLines % progressInterval == 0) {
+                    if (accumulator.getTotalLines() % progressInterval == 0) {
                         boolean checkpointSaved = false;
                         for (int attempt = 1; attempt <= 5 && !checkpointSaved; attempt++) {
                             try {
@@ -112,10 +233,6 @@ public class AnalysisJobRunner {
                                 job = analysisJobRepository.save(job);
                                 checkpointSaved = true;
                             } catch (ObjectOptimisticLockingFailureException e) {
-                                // cancelJob() tam bu anda aynı satırı güncellemiş olabilir
-                                // (cancel_requested bayrağını koyarken). Satırı yeniden okuyup
-                                // tekrar deniyoruz — bir sonraki denemede cancelRequested=true
-                                // görüp düzgünce CANCELLED'a geçeceğiz.
                                 if (attempt == 5) {
                                     throw e;
                                 }
@@ -123,35 +240,99 @@ public class AnalysisJobRunner {
                         }
                     }
                 }
+
+                aggregator.flush().ifPresent(group -> processGroup(group, selectedParser, accumulator, timelineAggregator, filterCriteria));
             }
 
-            handleSuccess(job, totalLines, infoCount, warningCount, errorCount, exceptionCount, errorMessageCounts);
+            int totalRecords = accumulator.getParsedEntryCount() + accumulator.getUnparsedLineCount();
+            if (totalRecords > 0) {
+                double unparsedPercentage = (accumulator.getUnparsedLineCount() * 100.0) / totalRecords;
+                if (unparsedPercentage > maxUnparsedLinePercentage) {
+                    handleFailure(job, "TOO_MANY_UNPARSED_LINES",
+                            "Parse edilemeyen satır oranı çok yüksek: %" + Math.round(unparsedPercentage));
+                    return;
+                }
+            }
+
+            handleSuccess(job, accumulator, timelineAggregator, selectedFormat, formatConfidence, sampleSize, matchedSampleCount);
 
         } catch (IOException e) {
-            handleFailure(job, "ANALYSIS_IO_ERROR", "Log dosyası okunurken bir hata oluştu: " + e.getMessage());
+            handleFailure(job, "ANALYSIS_IO_ERROR", "Log dosyasi okunurken bir hata olustu: " + e.getMessage());
         } catch (Exception e) {
             handleFailure(job, "ANALYSIS_UNEXPECTED_ERROR", e.getMessage());
         }
     }
 
-    private void handleSuccess(AnalysisJobEntity job, int totalLines, int infoCount, int warningCount,
-                                int errorCount, int exceptionCount, Map<String, Integer> errorMessageCounts) {
+    private LogFormat parseRequestedFormat(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return LogFormat.AUTO;
+        }
+        return LogFormat.valueOf(rawValue);
+    }
+
+    private boolean isSet(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private void processGroup(LogRecordGroup group, LogParser parser, AnalysisResultAccumulator accumulator,
+                               LogTimelineAggregator timelineAggregator, JobFilterCriteria filterCriteria) {
+        ParsedLogEntry entry = parser.parse(group.getHeaderLine());
+        if (entry == null) {
+            accumulator.recordUnparsedLine();
+            return;
+        }
+
+        if (!filterCriteria.matches(entry)) {
+            return;
+        }
+
+        String maskedMessage = sensitiveDataMasker.mask(entry.getMessage());
+        entry.setMessage(maskedMessage);
+        entry.setNormalizedMessage(logMessageNormalizer.normalize(maskedMessage));
+
+        MultilineExceptionInfo exceptionInfo = exceptionInfoExtractor.extract(group);
+        accumulator.recordEntry(entry, exceptionInfo);
+        timelineAggregator.record(entry.getTimestamp(), entry.getLevel(), exceptionInfo != null);
+    }
+
+    private void handleSuccess(AnalysisJobEntity job, AnalysisResultAccumulator accumulator,
+                                LogTimelineAggregator timelineAggregator, LogFormat detectedFormat,
+                                Integer formatConfidence, Integer sampleSize, Integer matchedSampleCount) {
         LogAnalysisEntity entity = new LogAnalysisEntity();
         entity.setFileName(job.getFileName());
         entity.setFileSize(job.getFileSize());
         entity.setAnalysisName(job.getAnalysisName());
-        entity.setTotalLines(totalLines);
-        entity.setInfoCount(infoCount);
-        entity.setWarningCount(warningCount);
-        entity.setErrorCount(errorCount);
-        entity.setExceptionCount(exceptionCount);
+        entity.setTotalLines(accumulator.getTotalLines());
+        entity.setInfoCount(accumulator.getInfoCount());
+        entity.setWarningCount(accumulator.getWarningCount());
+        entity.setErrorCount(accumulator.getErrorCount());
+        entity.setExceptionCount(accumulator.getExceptionCount());
         entity.setAnalyzedAt(Instant.now());
         entity.setProcessingDurationMs(Instant.now().toEpochMilli() - job.getStartedAt().toEpochMilli());
 
-        errorMessageCounts.forEach((message, count) ->
-                entity.addFrequentError(new FrequentErrorEntity(message, count)));
+        entity.setRequestedParserType(job.getRequestedParserType());
+        entity.setDetectedLogFormat(detectedFormat.name());
+        entity.setParsedEntryCount(accumulator.getParsedEntryCount());
+        entity.setUnparsedLineCount(accumulator.getUnparsedLineCount());
+        entity.setFirstLogTimestamp(accumulator.getFirstLogTimestamp());
+        entity.setLastLogTimestamp(accumulator.getLastLogTimestamp());
+        entity.setMultilineExceptionCount(accumulator.getMultilineExceptionCount());
+        entity.setFormatConfidence(formatConfidence);
+        entity.setFormatDetectionSampleSize(sampleSize);
+        entity.setMatchedSampleCount(matchedSampleCount);
+        entity.setParseQualityScore(accumulator.computeParseQualityScore());
+
+        Map<String, String> sampleMessages = accumulator.getNormalizedErrorSampleMessages();
+        accumulator.getNormalizedErrorCounts().forEach((normalizedMessage, count) ->
+                entity.addFrequentError(new FrequentErrorEntity(sampleMessages.get(normalizedMessage), normalizedMessage, count)));
 
         LogAnalysisEntity savedEntity = logAnalysisRepository.save(entity);
+
+        saveLoggerStats(savedEntity.getId(), accumulator);
+        saveThreadStats(savedEntity.getId(), accumulator);
+        saveStatusCodeStats(savedEntity.getId(), accumulator);
+        saveHttpMethodStats(savedEntity.getId(), accumulator);
+        timelineStatRepository.saveAll(timelineAggregator.toEntities(savedEntity.getId()));
 
         job.setStatus(JobStatus.SUCCEEDED);
         job.setProgress(100);
@@ -162,15 +343,32 @@ public class AnalysisJobRunner {
         tempFileStorageService.delete(job.getId());
     }
 
+    private void saveLoggerStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
+        accumulator.getLoggerCounts().forEach((loggerName, count) ->
+                loggerStatRepository.save(new AnalysisLoggerStatEntity(logAnalysisId, loggerName, count)));
+    }
+
+    private void saveThreadStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
+        accumulator.getThreadCounts().forEach((threadName, count) ->
+                threadStatRepository.save(new AnalysisThreadStatEntity(logAnalysisId, threadName, count)));
+    }
+
+    private void saveStatusCodeStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
+        accumulator.getStatusCodeCounts().forEach((statusCode, count) ->
+                statusCodeStatRepository.save(new AnalysisStatusCodeStatEntity(logAnalysisId, statusCode, count)));
+    }
+
+    private void saveHttpMethodStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
+        accumulator.getHttpMethodCounts().forEach((httpMethod, count) ->
+                httpMethodStatRepository.save(new AnalysisHttpMethodStatEntity(logAnalysisId, httpMethod, count)));
+    }
+
     private void handleFailure(AnalysisJobEntity job, String errorCode, String errorMessage) {
         job.setStatus(JobStatus.FAILED);
         job.setCompletedAt(Instant.now());
         job.setErrorCode(errorCode);
         job.setErrorMessage(errorMessage);
         analysisJobRepository.save(job);
-        // Not: geçici dosya BURADA silinmiyor — FAILED bir job retry edilebileceği
-        // için dosyaya ihtiyaç kalabilir. Dosya, ancak nihai bir sonuca (SUCCEEDED
-        // ya da CANCELLED) ulaşıldığında ya da retry limiti dolduğunda silinir.
     }
 
     private void handleCancellation(AnalysisJobEntity job) {
