@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-add-normalized-message-to-frequent-error
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: frequent_error
+            columns:
+              - column:
+                  name: normalized_message
+                  type: VARCHAR(1000)
+      rollback:
+        - dropColumn:
+            tableName: frequent_error
+            columnName: normalized_message

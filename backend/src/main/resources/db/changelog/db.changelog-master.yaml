@@ -15,3 +15,19 @@ databaseChangeLog:
       file: db/changelog/007-add-analysis-name-to-log-analysis.yaml
   - include:
       file: db/changelog/008-fix-analysis-job-fk-on-delete.yaml
+  - include:
+      file: db/changelog/009-add-parser-fields-to-log-analysis.yaml
+  - include:
+      file: db/changelog/010-create-analysis-logger-stat-table.yaml
+  - include:
+      file: db/changelog/011-create-analysis-thread-stat-table.yaml
+  - include:
+      file: db/changelog/012-create-http-stat-tables.yaml
+  - include:
+      file: db/changelog/013-create-analysis-timeline-stat-table.yaml
+  - include:
+      file: db/changelog/014-add-parse-quality-fields.yaml
+  - include:
+      file: db/changelog/015-add-parser-and-filter-fields-to-analysis-job.yaml
+  - include:
+      file: db/changelog/016-add-normalized-message-to-frequent-error.yaml

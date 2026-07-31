@@ -51,6 +51,39 @@ public class LogAnalysisEntity {
     @Column(name = "analysis_name")
     private String analysisName;
 
+    @Column(name = "requested_parser_type", length = 30)
+    private String requestedParserType;
+
+    @Column(name = "detected_log_format", length = 30)
+    private String detectedLogFormat;
+
+    @Column(name = "parsed_entry_count")
+    private Integer parsedEntryCount;
+
+    @Column(name = "unparsed_line_count")
+    private Integer unparsedLineCount;
+
+    @Column(name = "first_log_timestamp")
+    private Instant firstLogTimestamp;
+
+    @Column(name = "last_log_timestamp")
+    private Instant lastLogTimestamp;
+
+    @Column(name = "multiline_exception_count")
+    private Integer multilineExceptionCount;
+
+    @Column(name = "parse_quality_score")
+    private Integer parseQualityScore;
+
+    @Column(name = "format_confidence")
+    private Integer formatConfidence;
+
+    @Column(name = "format_detection_sample_size")
+    private Integer formatDetectionSampleSize;
+
+    @Column(name = "matched_sample_count")
+    private Integer matchedSampleCount;
+
     @OneToMany(mappedBy = "logAnalysis", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FrequentErrorEntity> frequentErrors = new ArrayList<>();
 
@@ -156,5 +189,93 @@ public class LogAnalysisEntity {
 
     public void setAnalysisName(String analysisName) {
         this.analysisName = analysisName;
+    }
+
+    public String getRequestedParserType() {
+        return requestedParserType;
+    }
+
+    public void setRequestedParserType(String requestedParserType) {
+        this.requestedParserType = requestedParserType;
+    }
+
+    public String getDetectedLogFormat() {
+        return detectedLogFormat;
+    }
+
+    public void setDetectedLogFormat(String detectedLogFormat) {
+        this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public Integer getParsedEntryCount() {
+        return parsedEntryCount;
+    }
+
+    public void setParsedEntryCount(Integer parsedEntryCount) {
+        this.parsedEntryCount = parsedEntryCount;
+    }
+
+    public Integer getUnparsedLineCount() {
+        return unparsedLineCount;
+    }
+
+    public void setUnparsedLineCount(Integer unparsedLineCount) {
+        this.unparsedLineCount = unparsedLineCount;
+    }
+
+    public Instant getFirstLogTimestamp() {
+        return firstLogTimestamp;
+    }
+
+    public void setFirstLogTimestamp(Instant firstLogTimestamp) {
+        this.firstLogTimestamp = firstLogTimestamp;
+    }
+
+    public Instant getLastLogTimestamp() {
+        return lastLogTimestamp;
+    }
+
+    public void setLastLogTimestamp(Instant lastLogTimestamp) {
+        this.lastLogTimestamp = lastLogTimestamp;
+    }
+
+    public Integer getMultilineExceptionCount() {
+        return multilineExceptionCount;
+    }
+
+    public void setMultilineExceptionCount(Integer multilineExceptionCount) {
+        this.multilineExceptionCount = multilineExceptionCount;
+    }
+
+    public Integer getParseQualityScore() {
+        return parseQualityScore;
+    }
+
+    public void setParseQualityScore(Integer parseQualityScore) {
+        this.parseQualityScore = parseQualityScore;
+    }
+
+    public Integer getFormatConfidence() {
+        return formatConfidence;
+    }
+
+    public void setFormatConfidence(Integer formatConfidence) {
+        this.formatConfidence = formatConfidence;
+    }
+
+    public Integer getFormatDetectionSampleSize() {
+        return formatDetectionSampleSize;
+    }
+
+    public void setFormatDetectionSampleSize(Integer formatDetectionSampleSize) {
+        this.formatDetectionSampleSize = formatDetectionSampleSize;
+    }
+
+    public Integer getMatchedSampleCount() {
+        return matchedSampleCount;
+    }
+
+    public void setMatchedSampleCount(Integer matchedSampleCount) {
+        this.matchedSampleCount = matchedSampleCount;
     }
 }

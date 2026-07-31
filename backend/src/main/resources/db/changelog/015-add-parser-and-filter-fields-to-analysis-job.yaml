@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-add-parser-and-filter-fields-to-analysis-job
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: requested_parser_type
+                  type: VARCHAR(30)
+              - column:
+                  name: detected_log_format
+                  type: VARCHAR(30)
+              - column:
+                  name: filter_start_time
+                  type: TIMESTAMP
+              - column:
+                  name: filter_end_time
+                  type: TIMESTAMP
+              - column:
+                  name: filter_levels
+                  type: VARCHAR(200)
+              - column:
+                  name: filter_logger
+                  type: VARCHAR(255)
+              - column:
+                  name: filter_thread
+                  type: VARCHAR(255)
+              - column:
+                  name: filter_message_contains
+                  type: VARCHAR(500)
+              - column:
+                  name: filter_status_codes
+                  type: VARCHAR(200)
+              - column:
+                  name: filter_http_methods
+                  type: VARCHAR(200)
+              - column:
+                  name: filter_path_contains
+                  type: VARCHAR(500)
+      rollback:
+        - dropColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: requested_parser_type
+              - column:
+                  name: detected_log_format
+              - column:
+                  name: filter_start_time
+              - column:
+                  name: filter_end_time
+              - column:
+                  name: filter_levels
+              - column:
+                  name: filter_logger
+              - column:
+                  name: filter_thread
+              - column:
+                  name: filter_message_contains
+              - column:
+                  name: filter_status_codes
+              - column:
+                  name: filter_http_methods
+              - column:
+                  name: filter_path_contains

@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-add-parse-quality-fields
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: parse_quality_score
+                  type: INT
+              - column:
+                  name: format_confidence
+                  type: INT
+              - column:
+                  name: format_detection_sample_size
+                  type: INT
+              - column:
+                  name: matched_sample_count
+                  type: INT
+      rollback:
+        - dropColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: parse_quality_score
+              - column:
+                  name: format_confidence
+              - column:
+                  name: format_detection_sample_size
+              - column:
+                  name: matched_sample_count

@@ -61,6 +61,39 @@ public class AnalysisJobEntity {
     @Column(name = "cancel_requested", nullable = false)
     private boolean cancelRequested;
 
+    @Column(name = "requested_parser_type", length = 30)
+    private String requestedParserType;
+
+    @Column(name = "detected_log_format", length = 30)
+    private String detectedLogFormat;
+
+    @Column(name = "filter_start_time")
+    private Instant filterStartTime;
+
+    @Column(name = "filter_end_time")
+    private Instant filterEndTime;
+
+    @Column(name = "filter_levels", length = 200)
+    private String filterLevels;
+
+    @Column(name = "filter_logger")
+    private String filterLogger;
+
+    @Column(name = "filter_thread")
+    private String filterThread;
+
+    @Column(name = "filter_message_contains", length = 500)
+    private String filterMessageContains;
+
+    @Column(name = "filter_status_codes", length = 200)
+    private String filterStatusCodes;
+
+    @Column(name = "filter_http_methods", length = 200)
+    private String filterHttpMethods;
+
+    @Column(name = "filter_path_contains", length = 500)
+    private String filterPathContains;
+
     @Version
     @Column(name = "version", nullable = false)
     private long version;
@@ -186,5 +219,93 @@ public class AnalysisJobEntity {
 
     public void setVersion(long version) {
         this.version = version;
+    }
+
+    public String getRequestedParserType() {
+        return requestedParserType;
+    }
+
+    public void setRequestedParserType(String requestedParserType) {
+        this.requestedParserType = requestedParserType;
+    }
+
+    public String getDetectedLogFormat() {
+        return detectedLogFormat;
+    }
+
+    public void setDetectedLogFormat(String detectedLogFormat) {
+        this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public Instant getFilterStartTime() {
+        return filterStartTime;
+    }
+
+    public void setFilterStartTime(Instant filterStartTime) {
+        this.filterStartTime = filterStartTime;
+    }
+
+    public Instant getFilterEndTime() {
+        return filterEndTime;
+    }
+
+    public void setFilterEndTime(Instant filterEndTime) {
+        this.filterEndTime = filterEndTime;
+    }
+
+    public String getFilterLevels() {
+        return filterLevels;
+    }
+
+    public void setFilterLevels(String filterLevels) {
+        this.filterLevels = filterLevels;
+    }
+
+    public String getFilterLogger() {
+        return filterLogger;
+    }
+
+    public void setFilterLogger(String filterLogger) {
+        this.filterLogger = filterLogger;
+    }
+
+    public String getFilterThread() {
+        return filterThread;
+    }
+
+    public void setFilterThread(String filterThread) {
+        this.filterThread = filterThread;
+    }
+
+    public String getFilterMessageContains() {
+        return filterMessageContains;
+    }
+
+    public void setFilterMessageContains(String filterMessageContains) {
+        this.filterMessageContains = filterMessageContains;
+    }
+
+    public String getFilterStatusCodes() {
+        return filterStatusCodes;
+    }
+
+    public void setFilterStatusCodes(String filterStatusCodes) {
+        this.filterStatusCodes = filterStatusCodes;
+    }
+
+    public String getFilterHttpMethods() {
+        return filterHttpMethods;
+    }
+
+    public void setFilterHttpMethods(String filterHttpMethods) {
+        this.filterHttpMethods = filterHttpMethods;
+    }
+
+    public String getFilterPathContains() {
+        return filterPathContains;
+    }
+
+    public void setFilterPathContains(String filterPathContains) {
+        this.filterPathContains = filterPathContains;
     }
 }

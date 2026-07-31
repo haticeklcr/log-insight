@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-add-parser-fields-to-log-analysis
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: requested_parser_type
+                  type: VARCHAR(30)
+              - column:
+                  name: detected_log_format
+                  type: VARCHAR(30)
+              - column:
+                  name: parsed_entry_count
+                  type: INT
+              - column:
+                  name: unparsed_line_count
+                  type: INT
+              - column:
+                  name: first_log_timestamp
+                  type: TIMESTAMP
+              - column:
+                  name: last_log_timestamp
+                  type: TIMESTAMP
+              - column:
+                  name: multiline_exception_count
+                  type: INT
+      rollback:
+        - dropColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: requested_parser_type
+              - column:
+                  name: detected_log_format
+              - column:
+                  name: parsed_entry_count
+              - column:
+                  name: unparsed_line_count
+              - column:
+                  name: first_log_timestamp
+              - column:
+                  name: last_log_timestamp
+              - column:
+                  name: multiline_exception_count
