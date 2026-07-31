@@ -1,5 +1,25 @@
 export type JobStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
 
+export type LogParserType =
+  | "AUTO"
+  | "SPRING_BOOT"
+  | "JSON"
+  | "NGINX_ACCESS"
+  | "APACHE_ACCESS"
+  | "PLAIN_TEXT";
+
+export interface AppliedFilters {
+  startTime: string | null;
+  endTime: string | null;
+  levels: string[] | null;
+  logger: string | null;
+  thread: string | null;
+  messageContains: string | null;
+  statusCodes: string[] | null;
+  httpMethods: string[] | null;
+  pathContains: string | null;
+}
+
 export interface CreateAnalysisJobResponse {
   jobId: string;
   analysisName: string;
@@ -34,4 +54,7 @@ export interface AnalysisJobDetail {
   completedAt: string | null;
   errorCode: string | null;
   analysisId: number | null;
+  requestedParserType?: string | null;
+  detectedLogFormat?: string | null;
+  appliedFilters?: AppliedFilters | null;
 }

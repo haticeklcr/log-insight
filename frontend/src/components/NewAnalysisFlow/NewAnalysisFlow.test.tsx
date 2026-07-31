@@ -87,4 +87,51 @@ describe("NewAnalysisFlow", () => {
 
     expect(mockedApi.createAnalysisJob).toHaveBeenCalledWith(expect.any(File), "Test Analizi");
   });
+
+  it("manuel parser seçimi yapıldığında parserType seçenekle birlikte gönderilir", async () => {
+    mockedApi.createAnalysisJob.mockResolvedValue({
+      jobId: "abc-123",
+      analysisName: "Test Analizi",
+      status: "PENDING",
+      progress: 0,
+      createdAt: "2026-01-01T10:00:00Z",
+    });
+
+    render(<NewAnalysisFlow onJobCreated={onJobCreated} />);
+
+    await userEvent.type(screen.getByTestId("analysis-name-input"), "Test Analizi");
+    await userEvent.selectOptions(screen.getByTestId("parser-type-select"), "JSON");
+    await userEvent.upload(screen.getByTestId("file-input"), sampleFile());
+    await userEvent.click(screen.getByRole("button", { name: "Analiz Et" }));
+
+    expect(mockedApi.createAnalysisJob).toHaveBeenCalledWith(
+      expect.any(File),
+      "Test Analizi",
+      expect.objectContaining({ parserType: "JSON" }),
+    );
+  });
+
+  it("gelişmiş filtre alanına girilen değerler seçenekle birlikte gönderilir", async () => {
+    mockedApi.createAnalysisJob.mockResolvedValue({
+      jobId: "abc-123",
+      analysisName: "Test Analizi",
+      status: "PENDING",
+      progress: 0,
+      createdAt: "2026-01-01T10:00:00Z",
+    });
+
+    render(<NewAnalysisFlow onJobCreated={onJobCreated} />);
+
+    await userEvent.type(screen.getByTestId("analysis-name-input"), "Test Analizi");
+    await userEvent.click(screen.getByTestId("toggle-advanced-filters"));
+    await userEvent.click(screen.getByLabelText("ERROR"));
+    await userEvent.upload(screen.getByTestId("file-input"), sampleFile());
+    await userEvent.click(screen.getByRole("button", { name: "Analiz Et" }));
+
+    expect(mockedApi.createAnalysisJob).toHaveBeenCalledWith(
+      expect.any(File),
+      "Test Analizi",
+      expect.objectContaining({ levels: ["ERROR"] }),
+    );
+  });
 });

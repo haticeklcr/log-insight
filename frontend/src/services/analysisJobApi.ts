@@ -6,6 +6,7 @@ import type {
   AnalysisJobSummary,
   AnalysisJobDetail,
   JobStatus,
+  LogParserType,
 } from "../types/analysisJob";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -20,10 +21,38 @@ async function throwApiError(response: Response, fallbackMessage: string): Promi
   throw new LogAnalysisApiError(apiError);
 }
 
-export async function createAnalysisJob(file: File, analysisName: string): Promise<CreateAnalysisJobResponse> {
+export interface CreateAnalysisJobOptions {
+  parserType?: LogParserType;
+  startTime?: string;
+  endTime?: string;
+  levels?: string[];
+  logger?: string;
+  thread?: string;
+  messageContains?: string;
+  statusCodes?: string[];
+  httpMethods?: string[];
+  pathContains?: string;
+}
+
+export async function createAnalysisJob(
+  file: File,
+  analysisName: string,
+  options?: CreateAnalysisJobOptions,
+): Promise<CreateAnalysisJobResponse> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("analysisName", analysisName);
+
+  if (options?.parserType) formData.append("parserType", options.parserType);
+  if (options?.startTime) formData.append("startTime", options.startTime);
+  if (options?.endTime) formData.append("endTime", options.endTime);
+  if (options?.levels?.length) formData.append("levels", options.levels.join(","));
+  if (options?.logger) formData.append("logger", options.logger);
+  if (options?.thread) formData.append("thread", options.thread);
+  if (options?.messageContains) formData.append("messageContains", options.messageContains);
+  if (options?.statusCodes?.length) formData.append("statusCodes", options.statusCodes.join(","));
+  if (options?.httpMethods?.length) formData.append("httpMethods", options.httpMethods.join(","));
+  if (options?.pathContains) formData.append("pathContains", options.pathContains);
 
   const response = await fetch(`${API_BASE_URL}/api/v1/analysis-jobs`, {
     method: "POST",

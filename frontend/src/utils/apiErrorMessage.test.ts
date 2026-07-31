@@ -61,4 +61,30 @@ describe("translateApiError - iki dilde hata kodu çevirisi", () => {
 
     expect(message).toBe("Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin.");
   });
+
+  it.each([
+    "INVALID_PARSER_TYPE",
+    "INVALID_DATE_RANGE",
+    "UNSUPPORTED_FILTER_FOR_PARSER",
+    "SELECTED_PARSER_CANNOT_PARSE_FILE",
+    "LOG_FORMAT_COULD_NOT_BE_DETECTED",
+    "TOO_MANY_UNPARSED_LINES",
+  ])("V5 hata kodu %s Türkçe ve İngilizce'de ham backend mesajına düşmeden çevrilir", (errorCode) => {
+    i18n.changeLanguage("tr");
+    const trMessage = translateApiError(
+      apiError(errorCode, "raw backend message"),
+      i18n.t.bind(i18n),
+      "newAnalysis.backendUnreachable"
+    );
+    expect(trMessage).not.toBe("raw backend message");
+
+    i18n.changeLanguage("en");
+    const enMessage = translateApiError(
+      apiError(errorCode, "raw backend message"),
+      i18n.t.bind(i18n),
+      "newAnalysis.backendUnreachable"
+    );
+    expect(enMessage).not.toBe("raw backend message");
+    expect(enMessage).not.toBe(trMessage);
+  });
 });
