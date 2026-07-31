@@ -19,6 +19,9 @@ public class AnalysisJobDetailDto {
     private Instant completedAt;
     private String errorCode;
     private Long analysisId;
+    private String requestedParserType;
+    private String detectedLogFormat;
+    private AppliedFiltersDto appliedFilters;
 
     public AnalysisJobDetailDto() {
     }
@@ -117,5 +120,29 @@ public class AnalysisJobDetailDto {
 
     public void setAnalysisId(Long analysisId) {
         this.analysisId = analysisId;
+    }
+
+    public String getRequestedParserType() {
+        return requestedParserType;
+    }
+
+    public void setRequestedParserType(String requestedParserType) {
+        this.requestedParserType = requestedParserType;
+    }
+
+    public String getDetectedLogFormat() {
+        return detectedLogFormat;
+    }
+
+    public void setDetectedLogFormat(String detectedLogFormat) {
+        this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public AppliedFiltersDto getAppliedFilters() {
+        return appliedFilters;
+    }
+
+    public void setAppliedFilters(AppliedFiltersDto appliedFilters) {
+        this.appliedFilters = appliedFilters;
     }
 }
