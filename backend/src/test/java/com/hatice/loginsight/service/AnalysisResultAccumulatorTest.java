@@ -122,4 +122,50 @@ class AnalysisResultAccumulatorTest {
 
         assertEquals(2, accumulator.getLoggerCounts().size());
     }
+
+    private ParsedLogEntry httpEntry(String thread, Integer statusCode, String method) {
+        ParsedLogEntry entry = new ParsedLogEntry();
+        entry.setThread(thread);
+        entry.setStatusCode(statusCode);
+        entry.setMethod(method);
+        entry.setMessage("request");
+        entry.setNormalizedMessage("request");
+        return entry;
+    }
+
+    @Test
+    void countsThreadDistributionCorrectly() {
+        AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(200, 500);
+
+        accumulator.recordEntry(httpEntry("worker-1", null, null), null);
+        accumulator.recordEntry(httpEntry("worker-1", null, null), null);
+        accumulator.recordEntry(httpEntry("worker-2", null, null), null);
+
+        assertEquals(2, accumulator.getThreadCounts().get("worker-1"));
+        assertEquals(1, accumulator.getThreadCounts().get("worker-2"));
+    }
+
+    @Test
+    void countsStatusCodeDistributionCorrectly() {
+        AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(200, 500);
+
+        accumulator.recordEntry(httpEntry(null, 200, null), null);
+        accumulator.recordEntry(httpEntry(null, 200, null), null);
+        accumulator.recordEntry(httpEntry(null, 404, null), null);
+
+        assertEquals(2, accumulator.getStatusCodeCounts().get(200));
+        assertEquals(1, accumulator.getStatusCodeCounts().get(404));
+    }
+
+    @Test
+    void countsHttpMethodDistributionCorrectly() {
+        AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(200, 500);
+
+        accumulator.recordEntry(httpEntry(null, null, "GET"), null);
+        accumulator.recordEntry(httpEntry(null, null, "GET"), null);
+        accumulator.recordEntry(httpEntry(null, null, "POST"), null);
+
+        assertEquals(2, accumulator.getHttpMethodCounts().get("GET"));
+        assertEquals(1, accumulator.getHttpMethodCounts().get("POST"));
+    }
 }

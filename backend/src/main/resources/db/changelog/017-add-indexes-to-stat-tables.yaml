@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-add-indexes-to-stat-tables
+      author: hatice
+      changes:
+        - createIndex:
+            tableName: analysis_logger_stat
+            indexName: idx_analysis_logger_stat_log_analysis_id
+            columns:
+              - column:
+                  name: log_analysis_id
+        - createIndex:
+            tableName: analysis_thread_stat
+            indexName: idx_analysis_thread_stat_log_analysis_id
+            columns:
+              - column:
+                  name: log_analysis_id
+        - createIndex:
+            tableName: analysis_status_code_stat
+            indexName: idx_analysis_status_code_stat_log_analysis_id
+            columns:
+              - column:
+                  name: log_analysis_id
+        - createIndex:
+            tableName: analysis_http_method_stat
+            indexName: idx_analysis_http_method_stat_log_analysis_id
+            columns:
+              - column:
+                  name: log_analysis_id
+        - createIndex:
+            tableName: analysis_timeline_stat
+            indexName: idx_analysis_timeline_stat_log_analysis_id
+            columns:
+              - column:
+                  name: log_analysis_id
+      rollback:
+        - dropIndex:
+            tableName: analysis_logger_stat
+            indexName: idx_analysis_logger_stat_log_analysis_id
+        - dropIndex:
+            tableName: analysis_thread_stat
+            indexName: idx_analysis_thread_stat_log_analysis_id
+        - dropIndex:
+            tableName: analysis_status_code_stat
+            indexName: idx_analysis_status_code_stat_log_analysis_id
+        - dropIndex:
+            tableName: analysis_http_method_stat
+            indexName: idx_analysis_http_method_stat_log_analysis_id
+        - dropIndex:
+            tableName: analysis_timeline_stat
+            indexName: idx_analysis_timeline_stat_log_analysis_id

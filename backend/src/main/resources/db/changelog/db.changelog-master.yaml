@@ -31,3 +31,5 @@ databaseChangeLog:
       file: db/changelog/015-add-parser-and-filter-fields-to-analysis-job.yaml
   - include:
       file: db/changelog/016-add-normalized-message-to-frequent-error.yaml
+  - include:
+      file: db/changelog/017-add-indexes-to-stat-tables.yaml

@@ -160,4 +160,41 @@ class AnalysisJobV5PersistenceTest extends AbstractIntegrationTest {
         assertThat(entity.getInfoCount()).isEqualTo(0);
         assertThat(entity.getWarningCount()).isEqualTo(0);
     }
+
+    @Test
+    void succeedsWithCorrectManualParserSelection() {
+        AnalysisJobEntity created = analysisJobService.createJob(
+                springBootFile("correct-manual-parser.log"), "Dogru Manuel Parser Testi",
+                "SPRING_BOOT", null, null, null, null, null, null, null, null, null);
+
+        AnalysisJobEntity finished = awaitStatus(created.getId(), JobStatus.SUCCEEDED);
+
+        assertThat(finished.getStatus()).isEqualTo(JobStatus.SUCCEEDED);
+        assertThat(finished.getRequestedParserType()).isEqualTo("SPRING_BOOT");
+        assertThat(finished.getDetectedLogFormat()).isEqualTo("SPRING_BOOT");
+
+        LogAnalysisEntity entity = logAnalysisRepository.findById(finished.getAnalysisId()).orElseThrow();
+        assertThat(entity.getParsedEntryCount()).isEqualTo(4);
+    }
+
+    @Test
+    void processesLargeFileViaStreamingWithoutErrors() {
+        StringBuilder largeContent = new StringBuilder();
+        for (int i = 0; i < 5000; i++) {
+            largeContent.append(String.format(
+                    "2026-01-01 10:%02d:%02d.000 INFO 1 --- [main] com.example.AppService : heartbeat %d%n",
+                    (i / 60) % 60, i % 60, i));
+        }
+        MockMultipartFile largeFile = new MockMultipartFile("file", "large.log", "text/plain",
+                largeContent.toString().getBytes(StandardCharsets.UTF_8));
+
+        AnalysisJobEntity created = analysisJobService.createJob(largeFile, "Buyuk Dosya Testi");
+
+        AnalysisJobEntity finished = awaitStatus(created.getId(), JobStatus.SUCCEEDED);
+        LogAnalysisEntity entity = logAnalysisRepository.findById(finished.getAnalysisId()).orElseThrow();
+
+        assertThat(entity.getTotalLines()).isEqualTo(5000);
+        assertThat(entity.getParsedEntryCount()).isEqualTo(5000);
+        assertThat(entity.getInfoCount()).isEqualTo(5000);
+    }
 }
