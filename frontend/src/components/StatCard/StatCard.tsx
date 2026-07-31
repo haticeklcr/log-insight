@@ -2,7 +2,7 @@ import styles from "./StatCard.module.css";
 
 interface StatCardProps {
   label: string;
-  value: number;
+  value: number | string;
 }
 
 export default function StatCard({ label, value }: StatCardProps) {

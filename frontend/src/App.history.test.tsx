@@ -71,6 +71,6 @@ describe("App - Analiz Geçmişi navigasyonu", () => {
     await userEvent.click(screen.getByRole("button", { name: "Detay" }));
 
     await waitFor(() => expect(mockedApi.fetchAnalysisDetail).toHaveBeenCalledWith(5));
-    await waitFor(() => expect(screen.getByText("Timeout")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("Timeout").length).toBeGreaterThan(0));
   });
 });

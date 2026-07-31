@@ -17,15 +17,17 @@ export default function FrequentErrorsTable({ errors }: FrequentErrorsTableProps
     <table className={styles.table}>
       <thead>
         <tr>
-          <th className={styles.headerCell}>{t("frequentErrorsTable.message")}</th>
+          <th className={styles.headerCell}>{t("frequentErrorsTable.normalizedMessage")}</th>
           <th className={styles.headerCell}>{t("frequentErrorsTable.count")}</th>
+          <th className={styles.headerCell}>{t("frequentErrorsTable.sampleMessage")}</th>
         </tr>
       </thead>
       <tbody>
         {errors.map((error) => (
           <tr key={error.message}>
-            <td className={styles.cell}>{error.message}</td>
+            <td className={styles.cell}>{error.normalizedMessage ?? error.message}</td>
             <td className={styles.cell}>{error.count}</td>
+            <td className={styles.cell}>{error.message}</td>
           </tr>
         ))}
       </tbody>

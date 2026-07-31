@@ -26,7 +26,31 @@
     "nameRequired": "Analysis name is required",
     "nameTooShort": "Analysis name must be at least 3 characters",
     "nameTooLong": "Analysis name must not exceed 100 characters",
-    "backendUnreachable": "Could not reach the backend service. Please try again later."
+    "backendUnreachable": "Could not reach the backend service. Please try again later.",
+    "parser": {
+      "label": "Log Format",
+      "options": {
+        "AUTO": "Auto-detect",
+        "SPRING_BOOT": "Spring Boot",
+        "JSON": "JSON",
+        "NGINX_ACCESS": "Nginx Access Log",
+        "APACHE_ACCESS": "Apache Access Log",
+        "PLAIN_TEXT": "Plain Text"
+      }
+    },
+    "filters": {
+      "show": "Show Advanced Filters",
+      "hide": "Hide Advanced Filters",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "levels": "Log Level",
+      "logger": "Logger",
+      "thread": "Thread",
+      "messageContains": "Message Contains",
+      "statusCodes": "HTTP Status Code (comma-separated)",
+      "httpMethods": "HTTP Method (comma-separated)",
+      "pathContains": "URL Path Contains"
+    }
   },
   "jobStatus": {
     "PENDING": "Pending",
@@ -93,7 +117,13 @@
     "JOB_NOT_FOUND": "Job not found",
     "INVALID_JOB_STATE": "This job cannot perform this action in its current state",
     "RETRY_LIMIT_EXCEEDED": "Maximum retry limit reached",
-    "generic": "The analysis failed."
+    "generic": "The analysis failed.",
+    "INVALID_PARSER_TYPE": "Invalid log format selection",
+    "INVALID_DATE_RANGE": "Invalid date range",
+    "UNSUPPORTED_FILTER_FOR_PARSER": "The selected filter is not supported for this log format",
+    "SELECTED_PARSER_CANNOT_PARSE_FILE": "The selected log format is not compatible with this file",
+    "LOG_FORMAT_COULD_NOT_BE_DETECTED": "The log format could not be automatically detected",
+    "TOO_MANY_UNPARSED_LINES": "Too large a portion of the file's lines could not be parsed"
   },
   "polling": {
     "unreachable": "Could not reach the backend service. The job status cannot be updated.",
@@ -143,11 +173,30 @@
   },
   "analysisDetail": {
     "back": "Back to History",
-    "mostFrequentErrors": "Most Frequent Errors"
-  },
+    "mostFrequentErrors": "Most Frequent Errors",
+    "formatInfo": "Format Information",
+    "detectedFormat": "Detected Format",
+    "parseQualityScore": "Parse Quality Score",
+    "formatConfidence": "Format Confidence",
+    "parsedEntryCount": "Parsed Entries",
+    "unparsedLineCount": "Unparsed Lines",
+    "multilineExceptionCount": "Multiline Exceptions",
+    "timeline": "Log Timeline",
+    "mostFrequentLoggers": "Most Frequent Loggers",
+    "mostFrequentThreads": "Most Frequent Threads",
+    "statusCodeDistribution": "HTTP Status Distribution",
+    "httpMethodDistribution": "HTTP Method Distribution",
+    "logger": "Logger",
+    "thread": "Thread",
+    "statusCode": "Status Code",
+    "httpMethod": "HTTP Method",
+    "count": "Count",
+    "noData": "No data available for this log format."
+    },
   "frequentErrorsTable": {
-    "empty": "No recurring error messages found.",
-    "message": "Error Message",
+    "empty": "No repeated error messages found.",
+    "normalizedMessage": "Normalized Error",
+    "sampleMessage": "Sample Raw Message",
     "count": "Occurrence Count"
   },
   "backendStatus": {

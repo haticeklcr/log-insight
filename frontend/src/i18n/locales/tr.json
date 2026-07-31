@@ -26,7 +26,31 @@
     "nameRequired": "Analiz adı zorunludur",
     "nameTooShort": "Analiz adı en az 3 karakter olmalıdır",
     "nameTooLong": "Analiz adı en fazla 100 karakter olabilir",
-    "backendUnreachable": "Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin."
+    "backendUnreachable": "Backend servisine ulaşılamadı. Lütfen daha sonra tekrar deneyin.",
+    "parser": {
+      "label": "Log Formatı",
+      "options": {
+        "AUTO": "Otomatik Algıla",
+        "SPRING_BOOT": "Spring Boot",
+        "JSON": "JSON",
+        "NGINX_ACCESS": "Nginx Access Log",
+        "APACHE_ACCESS": "Apache Access Log",
+        "PLAIN_TEXT": "Düz Metin"
+      }
+    },
+    "filters": {
+      "show": "Gelişmiş Filtreleri Göster",
+      "hide": "Gelişmiş Filtreleri Gizle",
+      "startTime": "Başlangıç Tarihi",
+      "endTime": "Bitiş Tarihi",
+      "levels": "Log Seviyesi",
+      "logger": "Logger",
+      "thread": "Thread",
+      "messageContains": "Mesaj İçeriği",
+      "statusCodes": "HTTP Status Code (virgülle ayırın)",
+      "httpMethods": "HTTP Method (virgülle ayırın)",
+      "pathContains": "URL Path İçeriği"
+    }
   },
   "jobStatus": {
     "PENDING": "Bekliyor",
@@ -93,7 +117,13 @@
     "JOB_NOT_FOUND": "İş bulunamadı",
     "INVALID_JOB_STATE": "Bu iş, şu anki durumunda bu işlem için uygun değil",
     "RETRY_LIMIT_EXCEEDED": "Maksimum tekrar deneme sayısına ulaşıldı",
-    "generic": "Analiz başarısız oldu."
+    "generic": "Analiz başarısız oldu.",
+    "INVALID_PARSER_TYPE": "Geçersiz log formatı seçimi",
+    "INVALID_DATE_RANGE": "Geçersiz tarih aralığı",
+    "UNSUPPORTED_FILTER_FOR_PARSER": "Seçilen filtre, bu log formatı ile uyumlu değil",
+    "SELECTED_PARSER_CANNOT_PARSE_FILE": "Seçilen log formatı bu dosyayla uyumlu değil",
+    "LOG_FORMAT_COULD_NOT_BE_DETECTED": "Log formatı otomatik olarak algılanamadı",
+    "TOO_MANY_UNPARSED_LINES": "Dosyadaki satırların çok büyük bir kısmı ayrıştırılamadı"
   },
   "polling": {
     "unreachable": "Backend servisine ulaşılamadı. İş durumu güncellenemiyor.",
@@ -143,13 +173,32 @@
   },
   "analysisDetail": {
     "back": "Geçmişe Dön",
-    "mostFrequentErrors": "En Sık Hatalar"
-  },
+    "mostFrequentErrors": "En Sık Hatalar",
+    "formatInfo": "Format Bilgisi",
+    "detectedFormat": "Algılanan Format",
+    "parseQualityScore": "Parse Kalite Skoru",
+    "formatConfidence": "Format Güven Skoru",
+    "parsedEntryCount": "Parse Edilen Kayıt",
+    "unparsedLineCount": "Parse Edilemeyen Satır",
+    "multilineExceptionCount": "Multiline Exception",
+    "timeline": "Log Zaman Çizelgesi",
+    "mostFrequentLoggers": "En Sık Logger'lar",
+    "mostFrequentThreads": "En Sık Thread'ler",
+    "statusCodeDistribution": "HTTP Status Dağılımı",
+    "httpMethodDistribution": "HTTP Method Dağılımı",
+    "logger": "Logger",
+    "thread": "Thread",
+    "statusCode": "Status Code",
+    "httpMethod": "HTTP Method",
+    "count": "Sayı",
+    "noData": "Bu log formatında veri bulunamadı."
+    },
   "frequentErrorsTable": {
     "empty": "Tekrar eden hata mesajı bulunamadı.",
-    "message": "Hata Mesajı",
+    "normalizedMessage": "Normalize Edilmiş Hata",
+    "sampleMessage": "Örnek Ham Mesaj",
     "count": "Tekrar Sayısı"
-  },
+    },
   "backendStatus": {
     "checking": "Kontrol ediliyor...",
     "up": "Servis çalışıyor",

@@ -1,5 +1,6 @@
 export interface ErrorFrequency {
   message: string;
+  normalizedMessage?: string | null;
   count: number;
 }
 
