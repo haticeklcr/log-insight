@@ -1,7 +1,22 @@
 # Log Analiz Uygulaması (log-insight)
 
 ## Amaç
-Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir. V4 ile birlikte log analizi artık arka planda çalışan asenkron bir **job** olarak yürütülür; kullanıcı her analize bir ad verir, job'ın durumunu (bekliyor/çalışıyor/tamamlandı/başarısız/iptal edildi) canlı olarak izleyebilir, iptal edebilir ya da başarısız olanları tekrar deneyebilir. Uygulama Türkçe ve İngilizce dillerini destekler.
+Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir. V4 ile birlikte log analizi artık arka planda çalışan asenkron bir **job** olarak yürütülür; kullanıcı her analize bir ad verir, job'ın durumunu (bekliyor/çalışıyor/tamamlandı/başarısız/iptal edildi) canlı olarak izleyebilir, iptal edebilir ya da başarısız olanları tekrar deneyebilir. V5 ile birlikte uygulama artık tek tip düz metin log dosyasıyla sınırlı değil — Spring Boot, JSON, Nginx access log, Apache access log ve genel düz metin olmak üzere 5 farklı log formatını otomatik algılayabiliyor veya kullanıcı manuel olarak seçebiliyor; hata mesajlarını normalize ederek gruplayabiliyor, log zaman çizelgesi çıkarabiliyor, hassas verileri maskeleyebiliyor ve gelişmiş filtrelerle (tarih aralığı, level, logger, thread, HTTP alanları) analiz kapsamını daraltabiliyor. Uygulama Türkçe ve İngilizce dillerini destekler.
+
+## V5 ile Eklenen Özellikler
+- **Çoklu log formatı desteği** — Spring Boot standart log formatı, JSON log formatı, Nginx access log, Apache access log ve genel düz metin log; her biri ayrı bir `LogParser` implementasyonu (`SpringBootLogParser`, `JsonLogParser`, `NginxAccessLogParser`, `ApacheAccessLogParser`, `PlainTextLogParser`)
+- **Otomatik format algılama (AUTO)** — dosyanın ilk 50 (yapılandırılabilir) anlamlı satırı örneklenerek, en yüksek eşleşme oranına sahip format seçilir; eşik altında kalırsa düz metne (PLAIN_TEXT) güvenli şekilde düşülür
+- **Manuel parser seçimi** — kullanıcı formatı bizzat belirtebilir; seçilen format dosyayla uyumlu değilse job kontrollü şekilde `FAILED` olur (`SELECTED_PARSER_CANNOT_PARSE_FILE`)
+- **Multiline stack trace desteği** — bir exception'a ait `at ...`/`Caused by:`/`Suppressed:`/`... N more` satırları tek bir kayıt olarak gruplanır, root cause tespit edilir
+- **Hata mesajı normalizasyonu** — UUID, IP, sayısal ID, timestamp, port, hex gibi değişken değerler yer tutucularla değiştirilerek aynı hatanın farklı örnekleri tek grupta toplanır
+- **Hassas veri maskeleme** — Authorization/Bearer/Basic auth, cookie, session ID, e-posta, kredi kartı benzeri numara, password/api-key/token alanları veritabanına yazılmadan/UI'a dönmeden önce maskelenir
+- **Log zaman çizelgesi** — dakikalık (gerektiğinde otomatik saatliğe ölçeklenen) bucket'larla zaman bazlı INFO/WARN/ERROR/exception dağılımı
+- **Parse kalite skoru ve format güven skoru** — her analiz için 0-100 arası iki ayrı, açıklayıcı skor
+- **Gelişmiş filtreler** — tarih aralığı, log level, logger, thread, mesaj içeriği, HTTP status code/method, URL path; parser ile uyumsuz filtre kombinasyonları kontrollü şekilde reddedilir
+- **Logger/thread/HTTP dağılım istatistikleri** — en sık log üreten logger/thread'ler, HTTP status code ve method dağılımları
+- **5 yeni Liquibase migration'ı, 5 yeni istatistik tablosu**
+- **Genişletilmiş parser mimarisi** — `LogParser` interface'i + Strategy/Factory Pattern ile yeni format eklemek mevcut kodda değişiklik gerektirmiyor
+- **80+ yeni backend testi, 30+ yeni frontend testi**, tümü V1-V4 testleriyle birlikte yeşil
 
 ## V4 ile Eklenen Özellikler
 - Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)
@@ -36,11 +51,160 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 - Nginx üzerinden reverse proxy yapılandırması
 - Genişletilmiş backend testleri + yeni frontend testleri
 
+## Desteklenen Log Formatları
+
+V5, aşağıdaki 5 log formatını destekler. Her format için bir örnek fixture dosyası `backend/src/test/resources/fixtures/` altında bulunur.
+
+### Spring Boot Standart Log Formatı
+Örnek fixture: `fixtures/spring-boot-sample.log`
+Ayrıştırılan alanlar: `timestamp`, `level`, `thread`, `logger`, `message`. (`processId` regex eşleşmesinde kullanılır ama ortak `ParsedLogEntry` modelinde saklanmaz — spec'in önerdiği ortak modelde bu alan yok.)
+
+### JSON Log Formatı
+Örnek fixture: `fixtures/json-sample.log` (her satır bağımsız bir JSON nesnesi — JSON Lines)
+```json
+{"timestamp": "2026-01-01T12:30:15Z", "level": "INFO", "logger": "com.example.Service", "message": "hello", "thread": "main"}
+```
+Alan adı esnekliği desteklenir: `timestamp`/`time`/`@timestamp`, `level`/`logLevel`/`severity`, `logger`/`class`/`source`, `message`/`msg`, `thread`/`threadName`. Timestamp hem ISO-8601 metin hem epoch milisaniye olarak kabul edilir.
+
+### Nginx Access Log
+Örnek fixture: `fixtures/nginx-access-sample.log` ("common" format — referrer/user-agent olmadan)
+
+### Apache Access Log
+Örnek fixture: `fixtures/apache-access-sample.log` ("combined" format — referrer/user-agent ile)
+
+**Nginx/Apache ayrımı:** İkisi de aynı temel regex yapısını kullanır (`HttpAccessLogFormat`); ayrım, satırın referrer/user-agent alanları İÇERİP İÇERMEDİĞİNE göre yapılır — "common" formatı sadece Nginx'e, "combined" formatı sadece Apache'ye atanmıştır. Bu, gerçek dünyada Nginx'in de combined format üretebileceği gerçeğinin bilinçli bir basitleştirmesidir (bkz. [Bilinen Eksikler](#bilinen-eksikler)).
+
+Her iki formatta da HTTP status code'undan bir log seviyesi türetilir: `5xx → ERROR`, `4xx → WARN`, diğerleri → `INFO` (spec'in bunu açıkça istemediği ama V1-V4'ten gelen level sayaçlarının HTTP loglarında da anlamlı kalması için alınmış bir tasarım kararı).
+
+### Genel Düz Metin Log
+Örnek fixture: `fixtures/plain-text-sample.log`
+
+`INFO`/`WARN`/`WARNING`/`ERROR`/`DEBUG`/`TRACE`/`Exception`/`Caused by` ifadelerini tanır (`WARNING` seviyesi `WARN` ile aynı kategoride sayılır). Diğer hiçbir parser'ın kabul etmediği (`canParse()` sonucu `false` olan) her satırı kabul eden **fallback (son çare) parser**'dır — kendi `canParse()` metodu her zaman `true` döner. Satır başında `yyyy-MM-dd HH:mm:ss` (isteğe bağlı milisaniye/`T` ayracıyla) kalıbına uyan bir tarih varsa bunu da ayrıştırır.
+
+## Parser Mimarisi
+
+Parser yapısı tamamen interface tabanlıdır ve genişletilebilir olacak şekilde tasarlanmıştır (`backend/src/main/java/com/hatice/loginsight/parser/`):
+parser/
+├── LogFormat.java # AUTO, SPRING_BOOT, JSON, NGINX_ACCESS, APACHE_ACCESS, PLAIN_TEXT
+├── ParsedLogEntry.java # Tüm parser'ların ortak çıktı modeli
+├── LogParser.java # Interface: getFormat() / canParse() / parse()
+├── LogParserFactory.java # Factory Pattern — LogFormat -> LogParser eşlemesi
+├── SpringBootLogParser.java
+├── JsonLogParser.java
+├── HttpAccessLogFormat.java # Nginx/Apache'nin paylaştığı ortak regex/ayrıştırma yardımcı sınıfı
+├── NginxAccessLogParser.java
+├── ApacheAccessLogParser.java
+├── PlainTextLogParser.java
+├── LogFormatDetector.java # Otomatik format algılama
+├── LogFormatDetectionResult.java
+├── MultilineExceptionAggregator.java
+├── LogRecordGroup.java
+├── MultilineExceptionInfo.java
+├── ExceptionInfoExtractor.java
+├── LogMessageNormalizer.java
+└── SensitiveDataMasker.java
+
+**Strategy Pattern:** Her format, `LogParser` interface'inin arkasında ayrı bir strateji olarak duruyor — "bir satırı nasıl ayrıştırırım" sorusunun 5 farklı cevabı, 5 ayrı sınıfta izole. Hiçbir yerde (controller, service, job runner) `if (format == SPRING_BOOT) ... else if (format == JSON) ...` şeklinde bir dallanma yok.
+
+**Factory Pattern:** `LogParserFactory`, hangi `LogFormat`'a hangi `LogParser`'ın karşılık geldiğine karar veren tek yer. Spring, `@Component` işaretli tüm `LogParser` implementasyonlarını otomatik olarak bir `List<LogParser>` halinde `LogParserFactory`'nin constructor'ına enjekte eder; factory bunları bir `Map<LogFormat, LogParser>`'a dönüştürür. `getParser(format)` O(1) sürede doğru parser'ı döner.
+
+**Interface + Polymorphism:** `AnalysisJobRunner` ve `LogFormatDetector`, hangi somut sınıfla konuştuklarını hiç bilmeden, sadece `LogParser` interface'i üzerinden (`parser.parse(satır)`, `parser.canParse(satır)`) çalışır — çalışma zamanında (runtime) Java doğru sınıfın kodunu otomatik seçer.
+
+**Ortak `ParsedLogEntry` modeli:** 5 farklı formatın ürettiği tamamen farklı alan kümeleri, tek bir ortak sınıfta (`timestamp`, `level`, `thread`, `logger`, `message`, `normalizedMessage`, `exceptionType`, `statusCode`, `method`, `path`, `sourceFormat`, `rawLine`) toplanır. Bir formatın kullanmadığı alan `null` bırakılır. Bu sayede maskeleme, normalizasyon, filtreleme, istatistik gibi tüm sonraki katmanlar formattan tamamen bağımsız çalışabilir.
+
+**Parser sorumluluklarının ayrılması:** Her sınıfın tek bir sorumluluğu var — parser'lar SADECE ham metni `ParsedLogEntry`'e çevirir; maskeleme (`SensitiveDataMasker`), normalizasyon (`LogMessageNormalizer`), multiline gruplama (`MultilineExceptionAggregator`), istatistik toplama (`AnalysisResultAccumulator`) ve zaman çizelgesi (`LogTimelineAggregator`) ayrı sınıflarda yaşar. `AnalysisJobRunner` bunları doğru sırada çağıran orkestratördür, içlerindeki mantığı bilmez.
+
+## Yeni Parser Ekleme Adımları
+
+Mevcut parser implementasyonlarında **hiçbir değişiklik yapmadan** yeni bir format eklemek için:
+
+1. `LogFormat` enum'una yeni bir değer ekle (örn. `LOG4J_XML`)
+2. `LogParser` interface'ini implemente eden, `@Component` işaretli yeni bir sınıf yaz (`getFormat()`, `canParse()`, `parse()` metotlarını doldur)
+3. Bu kadar.
+
+`LogParserFactory`'ye dokunulmaz (Spring, yeni `@Component`'i otomatik bulup listeye ekler). `LogFormatDetector`'a dokunulmaz (o zaten `parserFactory.getAllParsers()` ile kayıtlı TÜM parser'ları geziyor). `AnalysisJobRunner`'a dokunulmaz (polymorphic çalıştığı için hangi parser'ın eklendiğinden habersiz). Test için: `backend/src/test/resources/fixtures/` altına yeni bir örnek dosya + `backend/src/test/java/.../parser/` altına parser'a özel bir test sınıfı eklenmesi yeterlidir (bkz. [Parser Testlerinin Çalıştırılması](#parser-testlerinin-çalıştırılması)).
+
+## Otomatik Format Algılama
+
+Kullanıcı `AUTO` seçtiğinde (veya hiçbir `parserType` göndermediğinde), sistem şu adımları izler:
+
+1. Dosyanın **tamamı okunmaz** — `LogFormatDetector.collectSampleLines()` yalnızca ilk `LOG_FORMAT_DETECTION_SAMPLE_SIZE` (varsayılan 50) **anlamlı** (boş olmayan) satırı okur, bu sayıya ulaşır ulaşmaz okuma durur.
+2. Bu örnek satırlar, PLAIN_TEXT hariç her parser'a (`SpringBootLogParser`, `JsonLogParser`, `NginxAccessLogParser`, `ApacheAccessLogParser`) tek tek `canParse()` ile denenir.
+3. Her parser için "örneklerin kaçını anladığı" oranı hesaplanır — bu, **format güven skorudur** (`formatConfidence`).
+4. En yüksek güven skoruna sahip format `LOG_FORMAT_CONFIDENCE_THRESHOLD` (varsayılan 60) eşiğini geçiyorsa, o format seçilir.
+5. Eşiği geçemiyorsa, **PLAIN_TEXT'e güvenli şekilde düşülür** (fallback); bu durumda `detectedLogFormat` alanına yine `PLAIN_TEXT` yazılır, ama `formatConfidence`/`matchedSampleCount` alanlarına PLAIN_TEXT'in kendi (her zaman ~%100 çıkacak, dolayısıyla yanıltıcı olacak) skoru değil, **eşiği geçemeyen en iyi adayın** skoru kaydedilir — kullanıcı "sistem X formatını düşündü ama yeterince emin olamadığı için düz metne düştü" bilgisini görebilsin diye.
+6. Örneklenen satırların TAMAMI boşsa (dosyada hiç anlamlı içerik yoksa), `LOG_FORMAT_COULD_NOT_BE_DETECTED` hatasıyla job kontrollü şekilde `FAILED` olur — bu, gerçek hayatta neredeyse hiç tetiklenmez çünkü PLAIN_TEXT her zaman bir güvenlik ağı sağlar; sadece dosyanın kendisi tamamen boşsa/anlamsızsa devreye girer.
+
+### Format Güven Skoru Hesaplama Yaklaşımı
+
+`formatConfidence = round((eşleşen örnek satır sayısı / toplam örnek satır sayısı) × 100)`, 0-100 arası tam sayı. Küçük örnek boyutlarında (örn. dosyada sadece 3-4 satır varsa) yuvarlama nedeniyle sezgisel olmayan değerler (örn. 3/3 eşleşme ama %75 gibi bir ara sonuç) görülebilir — bu, **istatistiksel bir kesinlik iddiası değil**, sadece "örneklemin ne kadarı bu formata benziyor" sorusuna bir yaklaşık cevaptır.
+
+## Manuel Parser Seçimi
+
+Kullanıcı `POST /api/v1/analysis-jobs` isteğinde `parserType` alanını (`SPRING_BOOT`/`JSON`/`NGINX_ACCESS`/`APACHE_ACCESS`/`PLAIN_TEXT`) doldurduğunda:
+
+- Otomatik algılama **hiç çalıştırılmaz**.
+- İki aşamada doğrulanır: (1) job OLUŞTURULURKEN, `parserType`'ın geçerli bir enum değeri olup olmadığı (`INVALID_PARSER_TYPE`) ve seçilen filtrelerin bu formatla uyumlu olup olmadığı (`UNSUPPORTED_FILTER_FOR_PARSER`) kontrol edilir; (2) job ÇALIŞIRKEN, dosyanın gerçek ilk 50 örnek satırıyla seçilen parser'ın uyumu TEKRAR test edilir — uyum eşiğin altındaysa `SELECTED_PARSER_CANNOT_PARSE_FILE` ile job kontrollü şekilde `FAILED` olur (rastgele/yanlış sonuç üretilmez).
+
+## Parse Kalite Skoru Hesaplama Yaklaşımı
+
+`parseQualityScore` (0-100), 5 kriterin ortalamasının 100 ile çarpımıdır:
+1. Parse edilen kayıt oranı (`parsedEntryCount / (parsedEntryCount + unparsedLineCount)`)
+2. Parse edilemeyen satır oranının tersi (`1 - unparsedLineCount / toplam`)
+3. Timestamp bulunan kayıt oranı
+4. Level bulunan kayıt oranı
+5. Mesaj alanı bulunan kayıt oranı
+
+**Önemli:** Bu skor de, format güven skoru gibi, **bilimsel bir kesinlik ifade etmez** — sadece "bu analiz sonucuna ne kadar güvenilebileceğine" dair kaba bir gösterge sunar. Örneğin bir düz metin (plain text) dosyasında logger/thread/statusCode gibi alanlar doğası gereği hiç yoktur; bu, o alanların "eksik" olduğu anlamına gelmez, sadece o formatın onları desteklemediği anlamına gelir — skor hesaplamasında bu alanlar kritere dahil edilmemiştir (sadece timestamp/level/message dahildir), yine de skor "mükemmel ayrıştırma" garantisi vermez.
+
+## Multiline Stack Trace Desteği
+
+`MultilineExceptionAggregator`, satır satır okuma döngüsünün üstünde çalışan durum bilgili (stateful) bir gruplayıcıdır. Bir satırın "yeni bir kayıt" mı yoksa "önceki kaydın devamı" mı olduğuna şu kalıplara bakarak karar verir: `at ` ile başlıyor mu, `Caused by:`/`Suppressed:` ile başlıyor mu, `... N more` kalıbına uyuyor mu, ya da aktif parser'ın kendi deseniyle hiç eşleşmiyor mu (son çare kontrolü). Bir grup tamamlandığında (`LogRecordGroup`), `ExceptionInfoExtractor` bu grubu tarayıp exception tipini, mesajını ve **root cause**'u (zincirdeki en son `Caused by:`) çıkarır. Çok uzun stack trace'lerde devam satırları `MAX_STACK_TRACE_LINES` (varsayılan 500) ile sınırlanır — limit aşılırsa fazla satırlar sessizce atlanır (`LogRecordGroup.isTruncated()`), ama kayıt yine tek bir exception olayı olarak sayılmaya devam eder.
+
+## Hata Mesajı Normalizasyonu
+
+`LogMessageNormalizer`, tüm normalizasyon kurallarının tutulduğu **tek merkezi sınıftır** — hiçbir parser kendi regex'ini kopyalamaz. Sıralı olarak (en özelden en genele: UUID → IPv6 → IPv4 → timestamp → request/trace ID → port → hex → genel sayı) çalışan kurallar, "User 12345 not found" gibi mesajları "User `<NUMBER>` not found" haline getirir. Orijinal ham mesaj **kaybolmaz** — `ParsedLogEntry`'de hem `message` (ham/maskelenmiş) hem `normalizedMessage` (normalize edilmiş) ayrı alanlar olarak taşınır; gruplama `normalizedMessage` üzerinden yapılır, kullanıcıya örnek bir ham mesaj da gösterilir.
+
+## Hassas Veri Maskeleme
+
+`SensitiveDataMasker`, Authorization header, Bearer/Basic auth, cookie, session ID, e-posta, kredi kartı benzeri numara, password/passwd/secret, API key, access/refresh token kalıplarını `****` ile değiştirir. **Pipeline sırası kritiktir:** her kayıt önce maskelenir, SONRA normalize edilir (`AnalysisJobRunner.processGroup()`) — böylece maskelenmemiş hassas veri hiçbir zaman, normalize edilmiş haliyle bile, veritabanına yazılmaz veya UI'a dönmez.
+
+**Yanlış pozitif riskleri:** Maskeleme kuralları regex tabanlı olduğu için bazı meşru veriler de yanlışlıkla maskelenebilir — örneğin `password_reset_enabled=true` gibi bir alan adı "password" kelimesini içerdiği için değeri maskelenebilir, ya da 16 haneli bir sipariş numarası kredi kartı deseniyle eşleşip maskelenebilir. Bu, "hassas veriyi kaçırmaktansa fazla maskele" prensibiyle bilinçli olarak kabul edilmiş bir ödünleşimdir (trade-off).
+
+## Log Zaman Çizelgesi
+
+`LogTimelineAggregator`, timestamp'i olan her kaydı zaman bazlı "bucket"lara topluyor. **Bucket büyüklüğü otomatik seçilir:** dakikalık başlanır; bucket sayısı `MAX_TIMELINE_BUCKETS` (varsayılan 500) sınırını aşacaksa, mevcut tüm dakikalık bucket'lar saatlik bucket'lara birleştirilir (`rebucketToHourly()`) ve o andan itibaren saatlik devam edilir — bu, hem kısa hem uzun zaman aralıklarını makul sayıda bucket'la temsil edebilmeyi sağlar. Her bucket; başlangıç zamanı, toplam sayı, INFO/WARN/ERROR sayısı ve exception sayısını tutar; sonuçlar `analysis_timeline_stat` tablosunda saklanır. Timestamp içermeyen kayıtlar (veya timestamp'i hiç ayrıştırılamayan formatlar) timeline'a hiç dahil edilmez — bu durumda timeline sonucu boş olabilir.
+
+## Gelişmiş Filtreler
+
+Kullanıcı yeni analiz oluştururken 9 isteğe bağlı filtre belirleyebilir: başlangıç/bitiş tarihi, log level(ler), logger, thread, mesaj içeriği, HTTP status code(lar), HTTP method(lar), URL path içeriği. `JobFilterCriteria`, ayrıştırılan her kaydı bu filtrelere göre değerlendirir — uymayan kayıtlar **sanki dosyada hiç yokmuş gibi** analiz dışı bırakılır (ne "parse edildi" ne "parse edilemedi" sayılır). Filtreler sadece seçilen (veya algılanan) formatın desteklediği alanlara uygulanabilir — `AnalysisFilterSupport`, örneğin Spring Boot/JSON formatında HTTP status code filtresi, ya da Nginx/Apache formatında logger filtresi gibi uyumsuz kombinasyonları hem job oluşturulurken (manuel seçimde) hem job çalışırken (AUTO dahil, format kesinleştikten sonra) `UNSUPPORTED_FILTER_FOR_PARSER` ile kontrollü şekilde reddeder.
+
+## Yeni Analiz Sonucu Alanları
+
+V5 ile birlikte hem job detay (`GET /api/v1/analysis-jobs/{id}`) hem analiz detay (`GET /api/v1/analyses/{id}`) response'ları aşağıdaki yeni alanları içerir:
+
+| Alan | Nerede | Açıklama |
+|---|---|---|
+| `requestedParserType` | Job + Analiz | Kullanıcının istediği parser (`null`/boşsa `AUTO`) |
+| `detectedLogFormat` | Job + Analiz | Sistemin kesinleştirdiği format |
+| `parsedEntryCount` / `unparsedLineCount` | Analiz | Başarıyla ayrıştırılan / ayrıştırılamayan satır sayısı |
+| `unparsedLinePercentage` | Analiz | Veritabanında saklanmaz, `unparsedLineCount / (parsedEntryCount + unparsedLineCount)` olarak istek anında hesaplanır |
+| `firstLogTimestamp` / `lastLogTimestamp` | Analiz | Dosyadaki en erken/en geç log zamanı |
+| `multilineExceptionCount` | Analiz | Birden fazla satırdan oluşan (stack trace'li) exception sayısı |
+| `mostFrequentLoggers` / `mostFrequentThreads` | Analiz | `analysis_logger_stat`/`analysis_thread_stat` tablolarından, ayrı sorgularla çekilir |
+| `statusCodeDistribution` / `httpMethodDistribution` | Analiz | `analysis_status_code_stat`/`analysis_http_method_stat` tablolarından |
+| `timeline` | Analiz | `analysis_timeline_stat` tablosundan, bucket başlangıç zamanına göre sıralı |
+| `parseQualityScore` / `formatConfidence` | Analiz | 0-100 arası, bkz. [Parse Kalite Skoru](#parse-kalite-skoru-hesaplama-yaklaşımı) / [Format Güven Skoru](#format-güven-skoru-hesaplama-yaklaşımı) |
+| `formatDetectionSampleSize` / `matchedSampleCount` | Analiz | Format algılamada kaç örnek satır kullanıldığı / kaçının eşleştiği |
+| `appliedFilters` | Job + Analiz | Job'a girilen filtrelerin tamamı (bir analiz sonucu, onu üreten job'a geri bakılarak doldurulur — bkz. [Veritabanı Yapısı](#veritabanı-yapısı)) |
+
+Formatın desteklemediği alanlar (örn. plain text'te `mostFrequentLoggers`) boş liste veya `null` olarak döner; frontend bu durumda "Bu log formatında veri bulunamadı" empty state'ini gösterir.
+
 ## Kullanılan Teknolojiler
 
 **Geliştirme ortamı:** Windows 10/11, WSL2, Ubuntu 22.04, VS Code + WSL eklentisi, Git, GitHub
 
-**Backend:** Java 21, Spring Boot 4.1.0, Maven, Spring Web, Spring Validation, Spring Data JPA, Hibernate, Liquibase, Spring Boot Actuator, Spring Async, JUnit 5, Mockito, AssertJ, Testcontainers
+**Backend:** Java 21, Spring Boot 4.1.0, Maven, Spring Web, Spring Validation, Spring Data JPA, Hibernate, Liquibase, Spring Boot Actuator, Spring Async, Jackson (Jackson 3.x — bkz. [Karşılaşılan Sorunlar](#v5e-özgü-sorunlar)), JUnit 5, Mockito, AssertJ, Testcontainers
 
 **Frontend:** Node.js LTS, npm, React, TypeScript, Vite, Fetch API, CSS Modules, i18next, react-i18next, Vitest, React Testing Library
 
@@ -98,8 +262,14 @@ log-insight/
 | `analyzed_at` | TIMESTAMP | |
 | `processing_duration_ms` | BIGINT | analiz süresi (milisaniye) |
 | `analysis_name` | VARCHAR(100) | (V4) kullanıcının verdiği analiz adı |
+| `requested_parser_type` / `detected_log_format` | VARCHAR(30) | (V5) kullanıcının istediği / sistemin algıladığı format |
+| `parsed_entry_count` / `unparsed_line_count` | INT | (V5) |
+| `first_log_timestamp` / `last_log_timestamp` | TIMESTAMP | (V5) |
+| `multiline_exception_count` | INT | (V5) |
+| `parse_quality_score` / `format_confidence` | INT | (V5) 0-100 arası |
+| `format_detection_sample_size` / `matched_sample_count` | INT | (V5) |
 
-**`frequent_error`** — bir analize ait en sık tekrar eden hata mesajları
+**`frequent_error`** — bir analize ait en sık tekrar eden hata mesajları (V5: `normalized_message` sütunu eklendi, `message` artık örnek ham/maskelenmiş mesajı taşıyor)
 
 | Alan | Tip | Açıklama |
 |---|---|---|
@@ -124,6 +294,21 @@ log-insight/
 | `analysis_id` | BIGINT (FK → `log_analysis.id`, `ON DELETE SET NULL`) | başarılı job'ı sonucuna bağlar |
 | `cancel_requested` | BOOLEAN | |
 | `version` | BIGINT | optimistic locking için |
+| `requested_parser_type` / `detected_log_format` | VARCHAR(30) | (V5) |
+| `filter_start_time` / `filter_end_time` | TIMESTAMP | (V5) |
+| `filter_levels` / `filter_status_codes` / `filter_http_methods` | VARCHAR(200) | (V5) virgülle ayrılmış |
+| `filter_logger` / `filter_thread` | VARCHAR(255) | (V5) |
+| `filter_message_contains` / `filter_path_contains` | VARCHAR(500) | (V5) |
+
+**Yeni V5 tabloları** — her biri `log_analysis.id`'ye `ON DELETE CASCADE` foreign key ile bağlı, `log_analysis_id` üzerinde index'li:
+
+| Tablo | Alanlar |
+|---|---|
+| `analysis_logger_stat` | `id`, `log_analysis_id`, `logger_name`, `entry_count` |
+| `analysis_thread_stat` | `id`, `log_analysis_id`, `thread_name`, `entry_count` |
+| `analysis_status_code_stat` | `id`, `log_analysis_id`, `status_code`, `entry_count` |
+| `analysis_http_method_stat` | `id`, `log_analysis_id`, `http_method`, `entry_count` |
+| `analysis_timeline_stat` | `id`, `log_analysis_id`, `bucket_start`, `total_count`, `info_count`, `warn_count`, `error_count`, `exception_count` |
 
 Log dosyasının ham içeriği veritabanında saklanmaz — yalnızca analiz sonucu ve dosya metadata'sı kaydedilir.
 
@@ -146,7 +331,16 @@ backend/src/main/resources/db/changelog/
 ├── 005-add-analysis-job-indexes.yaml              # status / created_at index'leri (V4)
 ├── 006-add-job-analysis-relation.yaml             # analysis_job → log_analysis foreign key (V4)
 ├── 007-add-analysis-name-to-log-analysis.yaml     # log_analysis.analysis_name sütunu (V4)
-└── 008-fix-analysis-job-fk-on-delete.yaml         # foreign key'i ON DELETE SET NULL yapar (V4)
+├── 008-fix-analysis-job-fk-on-delete.yaml # foreign key'i ON DELETE SET NULL yapar (V4)
+├── 009-add-parser-fields-to-log-analysis.yaml # log_analysis'e parser/format alanları (V5)
+├── 010-create-analysis-logger-stat-table.yaml # analysis_logger_stat tablosu (V5)
+├── 011-create-analysis-thread-stat-table.yaml # analysis_thread_stat tablosu (V5)
+├── 012-create-http-stat-tables.yaml # analysis_status_code_stat + analysis_http_method_stat (V5)
+├── 013-create-analysis-timeline-stat-table.yaml # analysis_timeline_stat tablosu (V5)
+├── 014-add-parse-quality-fields.yaml # parse_quality_score / format_confidence vb. (V5)
+├── 015-add-parser-and-filter-fields-to-analysis-job.yaml # analysis_job'a parser/filtre alanları (V5)
+├── 016-add-normalized-message-to-frequent-error.yaml # frequent_error.normalized_message (V5)
+└── 017-add-indexes-to-stat-tables.yaml # yeni istatistik tablolarına index (V5)
 ```
 
 Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
@@ -255,6 +449,14 @@ Backend, `application.properties`'teki şu varsayılanlarla `localhost:5432`'ye 
 | `ANALYSIS_JOB_MAX_RETRY` | Backend | `3` | Bir job'ın maksimum retry sayısı. |
 | `ANALYSIS_JOB_PROGRESS_INTERVAL` | Backend | `100` | Progress/iptal kontrolünün kaç satırda bir yapılacağı. |
 | `ANALYSIS_TEMP_DIRECTORY` | Backend | `/tmp/log-insight` | Yüklenen dosyaların analiz tamamlanana kadar saklandığı geçici klasör. |
+| `LOG_FORMAT_DETECTION_SAMPLE_SIZE` | Backend | `50` | (V5) Otomatik format algılamada okunacak örnek satır sayısı. |
+| `LOG_FORMAT_CONFIDENCE_THRESHOLD` | Backend | `60` | (V5) Format güven skoru bu değerin altındaysa PLAIN_TEXT'e düşülür. |
+| `MAX_STACK_TRACE_LINES` | Backend | `500` | (V5) Bir multiline exception kaydında tutulacak maksimum devam satırı sayısı. |
+| `MAX_LOG_LINE_LENGTH` | Backend | `10000` | (V5) İşlenmeden önce her log satırının kırpılacağı maksimum karakter sayısı (aşırı regex backtracking riskine karşı). |
+| `MAX_DISTINCT_LOGGERS` | Backend | `200` | (V5) Logger/thread/HTTP method dağılımlarında tutulacak maksimum benzersiz değer sayısı. |
+| `MAX_DISTINCT_ERROR_GROUPS` | Backend | `500` | (V5) Normalize edilmiş hata gruplarının maksimum sayısı. |
+| `MAX_TIMELINE_BUCKETS` | Backend | `500` | (V5) Bu sayı aşılırsa dakikalık bucket'lar otomatik olarak saatliğe birleştirilir. |
+| `MAX_UNPARSED_LINE_PERCENTAGE` | Backend | `50` | (V5) Parse edilemeyen satır oranı bu yüzdeyi aşarsa job `TOO_MANY_UNPARSED_LINES` ile `FAILED` olur. |
 
 `.env.example` dosyası (proje kökünde), gerçek değerler olmadan hangi değişkenlerin gerektiğini gösterir; gerçek `.env` dosyası `.gitignore` ile git'e dahil edilmez.
 
@@ -362,7 +564,19 @@ Cevap `content`, `page`, `size`, `totalElements`, `totalPages`, `first`, `last` 
 ### Analiz Job Endpoint'leri (V4)
 
 **POST** `/api/v1/analysis-jobs` — yeni bir asenkron analiz job'ı oluşturur, hemen (analiz beklemeden) cevap döner.
-Content-Type: `multipart/form-data`, form alanları: `file`, `analysisName` (zorunlu, 3-100 karakter, trim edilir)
+Content-Type: `multipart/form-data`
+
+| Form alanı | Zorunlu mu | Açıklama |
+|---|---|---|
+| `file` | evet | |
+| `analysisName` | evet | 3-100 karakter, trim edilir |
+| `parserType` (V5) | hayır | `SPRING_BOOT`/`JSON`/`NGINX_ACCESS`/`APACHE_ACCESS`/`PLAIN_TEXT`; boş bırakılırsa `AUTO` |
+| `startTime` / `endTime` (V5) | hayır | ISO-8601 tarih-saat |
+| `levels` (V5) | hayır | virgülle ayrılmış (örn. `INFO,ERROR`) |
+| `logger` / `thread` (V5) | hayır | içerik araması, yalnızca Spring Boot/JSON'da desteklenir |
+| `messageContains` (V5) | hayır | içerik araması |
+| `statusCodes` / `httpMethods` (V5) | hayır | virgülle ayrılmış, yalnızca Nginx/Apache'de desteklenir |
+| `pathContains` (V5) | hayır | içerik araması, yalnızca Nginx/Apache'de desteklenir |
 
 ```bash
 curl -X POST -F "file=@backend/sample.log" -F "analysisName=Test Analizi" http://localhost:8080/api/v1/analysis-jobs
@@ -377,7 +591,27 @@ curl -X POST -F "file=@backend/sample.log" -F "analysisName=Test Analizi" http:/
 }
 ```
 
-**GET** `/api/v1/analysis-jobs/{id}` — job'ın güncel durumunu ve tüm detaylarını döner. Kayıt yoksa `404 Not Found` (`JOB_NOT_FOUND`).
+**Manuel parser seçimi ile örnek:**
+```bash
+curl -X POST -F "file=@backend/src/test/resources/fixtures/spring-boot-sample.log" \
+  -F "analysisName=Manuel Parser Testi" -F "parserType=SPRING_BOOT" -F "levels=ERROR" \
+  http://localhost:8080/api/v1/analysis-jobs
+```
+
+**GET** `/api/v1/analysis-jobs/{id}` — job'ın güncel durumunu ve tüm detaylarını döner. Kayıt yoksa `404 Not Found` (`JOB_NOT_FOUND`). (V5) Response artık `requestedParserType`, `detectedLogFormat`, `appliedFilters` alanlarını da içerir.
+
+### V5 Parser Hata Kodları
+
+| errorCode | HTTP Status | Ne zaman |
+|---|---|---|
+| `INVALID_PARSER_TYPE` | 400 | `parserType` geçerli bir `LogFormat` değeri değil |
+| `INVALID_DATE_RANGE` | 400 | `endTime`, `startTime`'dan önce/aynı, ya da tarih formatı geçersiz |
+| `UNSUPPORTED_FILTER_FOR_PARSER` | 400 | Seçilen (veya algılanan) formatın desteklemediği bir filtre girildi |
+| `SELECTED_PARSER_CANNOT_PARSE_FILE` | job `FAILED` | Manuel seçilen parser, dosyanın gerçek içeriğiyle uyumlu değil |
+| `LOG_FORMAT_COULD_NOT_BE_DETECTED` | job `FAILED` | `AUTO` modunda dosyada hiç anlamlı satır bulunamadı |
+| `TOO_MANY_UNPARSED_LINES` | job `FAILED` | Parse edilemeyen satır oranı `MAX_UNPARSED_LINE_PERCENTAGE`'ı aştı |
+
+`UNSUPPORTED_LOG_FORMAT`, `INVALID_JSON_LOG_ENTRY`, `SENSITIVE_DATA_MASKING_FAILED`, `LOG_LINE_TOO_LONG`, `STACK_TRACE_LIMIT_EXCEEDED` spec'in errorCode listesinde önerilmiş ama mimarimizde bilinçli olarak kullanılmamıştır — bkz. [Bilinen Eksikler](#bilinen-eksikler).
 
 **GET** `/api/v1/analysis-jobs` — sayfalı job listesi. Parametreler: `page`, `size`, `sort` (varsayılan `createdAt,desc`), `analysisName`, `fileName`, `status` (`PENDING`/`RUNNING`/`SUCCEEDED`/`FAILED`/`CANCELLED`).
 
@@ -424,6 +658,24 @@ V1/V2/V3'ten gelen tüm testler (dosya validasyonu, log sayaçları, hata grupla
 - Retry limiti kesin olarak dolduğunda geçici dosyanın da silindiğinin doğrulanması
 - Liquibase migration testinin `analysis_job` tablosunu ve `log_analysis.analysis_name` sütununu da kapsaması
 
+V5 ile eklenen test senaryoları (80 yeni birim testi + 5 entegrasyon testi, 14 test dosyası):
+- Her parser için doğru ayrıştırma (Spring Boot, JSON — standart + alternatif alan adları + epoch millis, Nginx, Apache, plain text — seviye tespiti + exception tipi + timestamp)
+- Format algılamanın doğru çalışması, güven skorunun hesaplanması, eşik altında PLAIN_TEXT'e düşülmesi, hiç örnek satır olmadığında kontrollü hata
+- Manuel parser seçiminin hem başarılı hem başarısız (uyumsuz dosya) senaryoları
+- Multiline stack trace'in tek kayıt olarak gruplanması, devam satırı limitinin uygulanması, root cause'un (zincirdeki en son `Caused by`) doğru çıkarılması
+- UUID/IP/sayısal ID/timestamp/hex normalizasyonu, aynı normalize mesaja sahip farklı ham mesajların tek grupta toplanması
+- Authorization/Bearer/e-posta/kredi kartı/password/api-key maskeleme
+- Parse kalite skorunun hem yüksek hem düşük (parse edilemeyen satır olan) senaryolarda doğru hesaplanması
+- Timeline bucket'larının doğru oluşturulması, dakikalık→saatlik otomatik ölçeklenmesi, timestamp'siz kayıtların görmezden gelinmesi
+- Logger/thread/status-code/http-method dağılımlarının doğru sayılması ve `MAX_DISTINCT_LOGGERS` ile sınırlandırılması
+- Tarih aralığı/level/logger/thread/mesaj/status-code/http-method/path filtrelerinin her birinin ayrı ayrı doğru çalışması
+- Parser ile uyumsuz filtre kombinasyonunda kontrollü validation hatası
+- Yeni tüm alanların (parser/format/skor/istatistik) gerçek PostgreSQL'e kalıcı olarak yazılması (Testcontainers)
+- V5 migration'larının (yeni tablolar + yeni sütunlar) gerçekten uygulandığının doğrulanması
+- 5.000 satırlık bir dosyanın streaming ile hatasız işlenmesi
+
+Her parser için ayrı bir fixture dosyası `backend/src/test/resources/fixtures/` altında bulunur (bkz. [Parser Testlerinin Çalıştırılması](#parser-testlerinin-çalıştırılması)).
+
 ### Testcontainers Testlerinin Çalıştırılması
 
 Veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker container'ında (Testcontainers ile) başlatarak çalışır — mock veya in-memory veritabanı kullanılmaz. Container, `AbstractIntegrationTest`'te "singleton container" deseniyle (JVM başına bir kez, elle) başlatılır ve tüm test sınıfları arasında paylaşılır. Bunun için Docker Desktop (ya da WSL2 üzerinde Docker) çalışır durumda olmalı; başka hiçbir manuel adım gerekmez.
@@ -444,6 +696,30 @@ V1/V2/V3'ten gelen tüm testler korunmuştur. V4 ile eklenen senaryolar:
 - Polling'in 2 saniyede bir tekrarlanması, terminal durumda durması, component unmount olunca temizlenmesi (`vi.useFakeTimers` ile)
 
 Testlerde gerçek backend yerine API mock'ları kullanılır. Ayrıca: Türkçe/İngilizce dil seçimi ve kalıcılığı (`LanguageSwitcher.test.tsx`, `i18n/index.test.ts`), job durumlarının iki dilde gösterimi (`JobStatusBadge.test.tsx`) ve API hata kodlarının iki dilde çevrilmesi/fallback davranışı (`utils/apiErrorMessage.test.ts`) ayrı, otomatik testlerle doğrulanmıştır.
+
+V5 ile eklenen senaryolar (28 yeni test, 3 yeni test dosyası):
+- Parser seçeneklerinin gösterilmesi, varsayılan seçimin `AUTO` (Otomatik Algıla) olması, manuel seçimin `onParserTypeChange`'i doğru değerle tetiklemesi
+- Gelişmiş filtre panelinin varsayılan olarak kapalı olması, aç/kapa butonunun çalışması
+- Seçilen parser'a göre alakasız filtre alanlarının (Spring Boot'ta HTTP alanları, Nginx'te logger/thread) gizlenmesi
+- Log seviyesi checkbox'larının işaretlenip filtre state'ine yansıması
+- Doldurulan parser/filtre alanlarının gerçekten `createAnalysisJob` çağrısına iletilmesi
+- Backend'den dönen `INVALID_DATE_RANGE` gibi bir hatanın ekranda çevrilmiş olarak gösterilmesi
+- Algılanan formatın, parse kalite skorunun, format güven skorunun, ilk/son log zamanının, parse başarı yüzdesinin sonuç ekranında gösterilmesi
+- V5 alanları olmayan (V5 öncesi) bir analiz için ilgili bölümlerin (Format Bilgisi, Timeline, Logger/Thread, HTTP dağılımı) hiç render edilmemesi — geriye dönük uyumluluk
+- Log zaman çizelgesinin (INFO/WARN/ERROR ayrımlı) gösterilmesi
+- Normalize edilmiş hata grubunun (normalize mesaj + sayı + örnek ham mesaj) ve maskelenmiş bir mesajın olduğu gibi gösterilmesi + maskeleme notunun görünmesi
+- Logger/thread istatistiklerinin, HTTP status/method dağılımının gösterilmesi; veri olmayan durumlarda "Bu log formatında veri bulunamadı" empty state'i
+- Yeni 6 V5 hata kodunun (`INVALID_PARSER_TYPE`, `INVALID_DATE_RANGE`, `UNSUPPORTED_FILTER_FOR_PARSER`, `SELECTED_PARSER_CANNOT_PARSE_FILE`, `LOG_FORMAT_COULD_NOT_BE_DETECTED`, `TOO_MANY_UNPARSED_LINES`) hem Türkçe hem İngilizce çevrildiğinin ve ham backend mesajına düşmediğinin doğrulanması
+- V5 metinlerinin (parser seçimi, gelişmiş filtreler, format bilgisi başlıkları) hem Türkçe hem İngilizce'de doğru render edildiğinin dedike bir testle (`i18n/v5Texts.test.tsx`) doğrulanması
+
+## Parser Testlerinin Çalıştırılması
+
+```bash
+cd backend
+./mvnw test -Dtest="com.hatice.loginsight.parser.*"
+```
+
+Bu komut, `parser` paketindeki 10 test sınıfını (her parser + detector + aggregator + extractor + normalizer + masker için) izole olarak çalıştırır — veritabanı/Docker gerektirmez, saniyeler içinde biter. Tüm parser testleri ve entegrasyon testi dahil olmak üzere V5'in tam kapsamını görmek için `./mvnw clean test` (bkz. [Backend Testleri](#backend-testleri)) kullanılmalıdır.
 
 ## Nginx Proxy Yapısının Kısa Açıklaması
 
@@ -504,6 +780,27 @@ frontend/src/i18n/
 ### İngilizce Arayüz (V4)
 ![İngilizce arayüz](screenshots/ui-english.png)
 
+### Parser Seçim Ekranı (V5)
+![Parser seçim ekranı](screenshots/v5-parser-selection.png)
+
+### Gelişmiş Filtre Ekranı (V5)
+![Gelişmiş filtre ekranı](screenshots/v5-advanced-filters.png)
+
+### Log Zaman Çizelgesi (V5)
+![Log zaman çizelgesi](screenshots/v5-timeline.png)
+
+### Parse Kalite Skoru ve Format Bilgisi (V5)
+![Parse kalite skoru](screenshots/v5-parse-quality-score.png)
+
+### Normalize Edilmiş Hata Grupları (V5)
+![Normalize edilmiş hata grupları](screenshots/v5-normalized-errors.png)
+
+### Türkçe Arayüz (V5)
+![Türkçe arayüz V5](screenshots/v5-ui-turkish.png)
+
+### İngilizce Arayüz (V5)
+![İngilizce arayüz V5](screenshots/v5-ui-english.png)
+
 ## Bilinen Eksikler
 - Sürükle-bırak (drag-and-drop) desteği eklendi ancak farklı tarayıcılarda kapsamlı test edilmedi.
 - `mostFrequentErrors` listesinde üst sınır (örn. ilk 10) uygulanmıyor; çok sayıda benzersiz hata mesajı olan büyük dosyalarda liste uzun olabilir.
@@ -512,7 +809,26 @@ frontend/src/i18n/
 - `useJobPolling` hook'u, polling zaten bir hata mesajı gösteriyorken kullanıcı dil değiştirirse, ekrandaki mesajı hemen değil bir sonraki başarısız denemede yeni dile çevirir (bilinçli, küçük bir basitleştirme — bkz. kod içi yorum).
 - Job geçmişinde otomatik arşivleme/eskimiş kayıtları temizleme mekanizması yok; `analysis_job` tablosu süresiz büyür.
 
+**V5'e Özgü Bilinen Eksikler:**
+- `UNSUPPORTED_LOG_FORMAT`, `INVALID_JSON_LOG_ENTRY`, `SENSITIVE_DATA_MASKING_FAILED` errorCode'ları spec'in önerdiği listede var ama bilinçli olarak hiç kullanılmıyor: `PlainTextLogParser` her zaman bir fallback sağladığı için "desteklenmeyen format" durumu hiç oluşmuyor; geçersiz bir JSON satırı zaten `unparsedLineCount`'a düşüp `TOO_MANY_UNPARSED_LINES` güvenlik ağıyla korunuyor; `SensitiveDataMasker` saf regex tabanlı olduğu için hiçbir zaman exception fırlatmıyor.
+- `LOG_LINE_TOO_LONG` ve `STACK_TRACE_LIMIT_EXCEEDED` job'u `FAILED` yapmıyor — bilinçli olarak sessiz kırpma (truncate) ile "güvenli tarafta kal" yaklaşımı seçildi; limitlerin amacı zaten kaynak korumak, dosyayı reddetmek değil.
+- Nginx/Apache ayrımı, "common" (referrer'sız) formatı Nginx'e, "combined" (referrer'lı) formatı Apache'ye atayarak yapılıyor — ama gerçek dünyada Nginx da combined format üretebilir. Böyle bir Nginx dosyası yanlışlıkla Apache olarak algılanabilir (fonksiyonel olarak zararsız, çünkü iki parser'ın ayrıştırdığı alanlar neredeyse aynı, ama `detectedLogFormat` etiketi yanıltıcı olabilir).
+- `MAX_UNPARSED_LINE_SAMPLES` environment variable'ı spec'in örnek listesinde var ama kullanılmıyor — sistem hiçbir yerde parse edilemeyen satırların ham örneklerini saklamıyor, sadece sayısını (`unparsedLineCount`) tutuyor.
+- Log Zaman Çizelgesi grafiği harici bir kütüphane olmadan, saf CSS ile çizilen basit bir sütun grafiği — yakınlaştırma (zoom), belirli bir zaman aralığını seçme gibi etkileşimli özellikler yok, sadece görsel bir özet.
+- Format algılama yalnızca dosyanın ilk 50 satırına bakıyor; teorik olarak bir dosyanın ortasında format değişirse (örn. rotasyon sırasında iki farklı uygulamanın loglarının birleşmesi gibi son derece nadir bir senaryo), bu değişiklik hiç fark edilmez.
+- `mostFrequentLoggers`/`mostFrequentThreads`/`mostFrequentErrors` listelerinde üst sınır UI'da uygulanmıyor (V4'ten devam eden bilinen eksikliğin V5'teki yeni listeler için de geçerli hali) — backend `MAX_DISTINCT_*` ile veri toplamayı sınırlıyor ama frontend tüm listeyi tek seferde render ediyor.
+
 ## Karşılaşılan Sorunlar ve Çözümleri
+
+### V5'e Özgü Sorunlar
+
+- **Spring Boot 4.1'in Jackson'ı otomatik getirmemesi:** `spring-boot-starter-webmvc`, V4'te Liquibase'de yaşadığımız modülerleşme sorununun bir benzeriyle, artık JSON (Jackson) desteğini otomatik getirmiyor — `JsonLogParser` yazılınca derleme hatası (`package com.fasterxml.jackson.databind does not exist`) alındı. `spring-boot-starter-json` bağımlılığı ayrıca eklenerek çözüldü.
+- **Jackson 3.x'in paket adını (namespace) değiştirmesi:** Yukarıdaki düzeltmeden sonra AYNI hata farklı bir şekilde tekrar çıktı. Kanıt (`./mvnw dependency:tree`) incelendiğinde, Spring Boot 4.1'in aslında Jackson 3.x kullandığı görüldü — Jackson 3.0 ile birlikte proje `com.fasterxml.jackson.databind` yerine `tools.jackson.databind` paket adını kullanmaya başlamış (sadece `jackson-annotations` eski adında kalmış). `JsonLogParser`'daki import satırları güncellenerek çözüldü.
+- **`016` numaralı migration'ın (frequent_error.normalized_message) uygulanmamış olması:** Bir önceki mesajda "ekledim" denilmiş ama migration dosyasının içeriği ile master changelog diff'i hiç paylaşılmamıştı — sonraki bir fazda Testcontainers testi `SchemaManagementException: Schema validation: missing column [normalized_message]` hatasıyla bunu ortaya çıkardı. Migration dosyası ve master changelog güncellemesi gerçekten paylaşılarak çözüldü; bu olay, her adımda gerçek dosya içeriğinin verilmesi gerektiğinin önemini gösterdi.
+- **`@Transactional` test metodu + `@Async` servis kombinasyonunun klasik tuzağı:** `frequentErrors` koleksiyonundaki `LazyInitializationException`'ı çözmek için bir Testcontainers testine `@Transactional` eklenince, testin TAMAMI tek bir veritabanı transaction'ında çalışmaya başladı; bu transaction commit olmadığı için, ayrı bir thread'de (ayrı bağlantıyla) çalışan `AnalysisJobRunner` henüz "görünmeyen" job satırını bulamadı, sessizce hiçbir şey yapmadan döndü, job sonsuza kadar `PENDING` kaldı. Kanıt (test süresinin tam olarak zaman aşımı süresine denk gelmesi, sonra job'ın hâlâ `PENDING` olduğunun görülmesi) izlenerek teşhis edildi. Çözüm: `@Transactional`'ı testten kaldırıp, `LogAnalysisRepository`'ye `JOIN FETCH` kullanan bir `findByIdWithFrequentErrors()` sorgu metodu eklemek — açık bir Hibernate oturumuna hiç gerek kalmadı.
+- **`PlainTextLogParser`'ın satır başındaki timestamp'i hiç okumaması:** Manuel UI testinde (`huge-test.log`, 150.000 satır), timestamp'i olan satırlarda bile Log Zaman Çizelgesi'nin boş kaldığı ve parse kalite skorunun gereksiz düşük (80) çıktığı fark edildi. Kanıt (dosyanın gerçek ilk satırlarının paylaşılması) toplandıktan sonra, `PlainTextLogParser`'ın timestamp alanını hiçbir zaman doldurmadığı görüldü — parser sadece seviye/mesaj ayrıştırıyordu. Satır başında `yyyy-MM-dd HH:mm:ss` kalıbına uyan bir tarih varsa ayrıştıran bir yardımcı metot eklenerek çözüldü.
+- **V1-V4'ten kalma testlerin yeni V5 alanlarıyla kırılması (birkaç kez):** (1) `createJob(file, analysisName)` imzasına yeni zorunlu parametreler eklenince mevcut testler derlenemez oldu — eski imza, yeni metodu `null` filtrelerle çağıran bir overload olarak geri eklenerek çözüldü. (2) Yeni "En Sık Hatalar" tablosunun normalize+ham mesajı ayrı sütunlarda göstermesi, ham mesajın (normalize edilmemiş bir test verisinde) iki kez görünmesine ve eski bir testin (`getByText` ile tekil eşleşme bekleyen) kırılmasına yol açtı — `getAllByText` ile düzeltildi. (3) `AnalysisJobDetail` tipine eklenen yeni zorunlu alanlar, mevcut test mock nesnelerini geçersiz kıldı — alanlar isteğe bağlı (`?:`) yapılarak çözüldü.
+- **Frontend'de yanlış alan adıyla test verisi kurulması:** Yeni bir frontend testinde `LogAnalysisApiError`'a `errorCode` adında bir alan verilmişti, ama gerçek `ApiError` interface'i bu alanı `error` olarak adlandırıyordu (`LogAnalysisApiError`'ın kendi `errorCode` property'si zaten bunu constructor içinde otomatik dolduruyor). TypeScript derleme hatası (`Object literal may only specify known properties`) sayesinde derleme aşamasında yakalandı.
 
 ### V4'e Özgü Sorunlar
 
@@ -594,3 +910,78 @@ frontend/src/i18n/
 - Graceful/relaunch senaryolarında yarım kalan işlerin ele alınması (restart recovery)
 - Streaming dosya okuma ve dekoratör deseni (`CountingInputStream`)
 - i18next ile çok dilli frontend mimarisi, çeviri anahtarı organizasyonu, backend hata kodlarının frontend'de merkezi çevirisi
+
+---
+
+**V5'te yapay zekâdan hangi konularda destek alındığı:**
+- Çoklu parser mimarisinin baştan tasarımı (Strategy + Factory Pattern, ortak `ParsedLogEntry` modeli, `LogParserFactory`'nin Spring'in otomatik bean toplama mekanizmasıyla kurulması)
+- 5 parser'ın (Spring Boot, JSON, Nginx, Apache, plain text) her birinin regex/ayrıştırma mantığının yazılması
+- Otomatik format algılama algoritmasının (örnekleme, güven skoru, eşik, fallback) tasarımı
+- Multiline stack trace gruplama durum makinesinin (state machine) ve root cause çıkarımının tasarımı
+- Hata mesajı normalizasyonu ve hassas veri maskeleme için merkezi, sıralı regex kural setlerinin tasarımı
+- Zaman çizelgesi (timeline) bucket'lama ve otomatik dakika→saat ölçeklendirme mantığının tasarımı
+- Gelişmiş filtreleme mimarisinin (`JobFilterCriteria`, `AnalysisFilterSupport`) ve parser-filtre uyumluluk kontrolünün tasarımı
+- Yeni veritabanı şemasının (11 yeni sütun, 5 yeni tablo) ve Liquibase migration'larının yazılması
+- Backend'in (`AnalysisJobRunner`) tamamen yeniden yazılıp tüm bu parçaların gerçek analiz akışına bağlanması
+- Frontend'de parser seçimi/gelişmiş filtre UI'ı ve sonuç ekranının yeni bölümlerinin (format bilgisi, timeline grafiği, istatistik tabloları) tasarımı
+- 80+ backend, 30+ frontend testinin yazımı (Testcontainers entegrasyon testi dahil)
+- Ortam/kod sorunlarının (Jackson paket adı değişikliği, eksik migration, `@Transactional`+`@Async` çakışması, eksik timestamp ayrıştırma) kanıta dayalı olarak debug edilmesi
+
+**Parser mimarisi için alınan destek:**
+- "Parser seçimi controller veya service içerisinde uzun if-else veya switch bloklarıyla yapılmamalıdır" gereksinimi, `LogParser` interface'i + Strategy Pattern + `LogParserFactory` (Factory Pattern) ile karşılandı; Spring'in `List<LogParser>` constructor injection'ı sayesinde yeni bir parser eklemenin `LogParserFactory`'ye hiç dokunmadan yapılabilmesi özellikle vurgulandı.
+- "Yeni parser eklemek için mevcut parser implementasyonlarında mümkün olduğunca değişiklik yapılmamalıdır" gereksinimi, ortak `ParsedLogEntry` modeli + polymorphic çağrılarla (`AnalysisJobRunner`'ın hiçbir zaman somut parser sınıflarını bilmemesi) yapısal olarak sağlandı.
+
+**Regex üretimi için kullanılan promptlar:**
+- Her formatın spec'teki örnek satırı verilip, o satırı tam olarak eşleştirecek + ilgili alanları (timestamp/level/thread/logger/message gibi) named gruplarla çıkaracak regex istendi.
+- "Regex kullanımlarında aşırı backtracking riskine dikkat edilmelidir" gereksinimi doğrultusunda, her satırın işlenmeden önce `MAX_LOG_LINE_LENGTH` ile kırpılması istendi — regex'in kendisini "felaket geri izlemeye" (catastrophic backtracking) dayanıklı hale getirmek yerine, girdi boyutunu sınırlayarak riski azaltan bir yaklaşım tercih edildi.
+
+**JSON log desteği için kullanılan promptlar:**
+- "En az aşağıdaki yaygın alan adları desteklenmelidir" listesi (timestamp/time/@timestamp gibi) doğrudan `JsonLogParser`'daki aday-alan-isimleri listelerine yansıtıldı.
+- Jackson'ın Spring Boot 4.1'de otomatik gelmemesi ve ardından Jackson 3.x'in paket adı değişikliği, gerçek derleme hatalarının paylaşılıp kanıta dayalı çözülmesiyle giderildi (bkz. Karşılaşılan Sorunlar).
+
+**Nginx ve Apache log desteği için kullanılan promptlar:**
+- "En az common veya combined formatlarından biri desteklenmelidir" gereksinimi karşısında, iki formatın ayırt edilmesi için bilinçli bir tasarım kararı (common→Nginx, combined→Apache) istendi ve kullanıcıya bu kararın gerekçesi ve sınırlaması (gerçek Nginx'in de combined üretebileceği) açıkça sorulup onaylatıldı.
+
+**Multiline stack trace için kullanılan promptlar:**
+- "Exception başlangıç satırı, at ile başlayan satırlar, Caused by, Suppressed, ... n more satırları aynı hata kaydının parçası olarak ele alınmalı" listesi, `MultilineExceptionAggregator`'daki `isContinuationLine()` kontrol sırasına birebir yansıtıldı.
+- "Root cause mümkünse tespit edilmelidir" gereksinimi, `ExceptionInfoExtractor`'ın `Caused by:` zincirindeki EN SON eşleşmeyi root cause kabul etmesiyle karşılandı.
+
+**Format detection için kullanılan promptlar:**
+- "İlk belirli sayıdaki anlamlı satır incelenebilir", "boş satırlar dikkate alınmamalı", "format güven skoru eşik değerin altındaysa PLAIN_TEXT fallback kullanılmalı" maddeleri `LogFormatDetector`'daki `collectSampleLines`/`detect` metotlarına doğrudan yansıtıldı.
+
+**Hata normalizasyonu için kullanılan promptlar:**
+- "En az UUID, IPv4, IPv6, sayısal ID, timestamp, port, request ID, trace ID, hexadecimal değerlerin normalize edilmesi değerlendirilmelidir" listesi, `LogMessageNormalizer`'daki sıralı kural listesine (en özelden en genele) birebir yansıtıldı; sıralamanın neden önemli olduğu (UUID'nin içindeki rakamların genel sayı kuralına düşmemesi gerektiği) ayrıca sorgulanıp gerekçelendirildi.
+
+**Hassas veri maskeleme için kullanılan promptlar:**
+- "Maskeleme, mesaj veritabanına yazılmadan ve UI response'una eklenmeden önce uygulanmalıdır" gereksinimi, pipeline sırasının (önce maskele, sonra normalize et) `AnalysisJobRunner.processGroup()` içinde açıkça bu sırayla kodlanmasıyla karşılandı.
+
+**Kalite skoru ve timeline için kullanılan promptlar:**
+- "Skorun bilimsel kesinlik ifade etmediği açıkça belirtilmelidir" gereksinimi hem kod yorumlarında (spec gereği artık kaldırıldı, bkz. aşağıdaki not) hem bu README'de açıkça belirtildi.
+- "Sistem dosyanın zaman aralığına göre uygun bucket büyüklüğünü otomatik seçebilir" önerisi, `LogTimelineAggregator`'ın dakikalık başlayıp `MAX_TIMELINE_BUCKETS` aşılınca saatliğe otomatik geçmesiyle karşılandı.
+
+**Filtre yapısı için kullanılan promptlar:**
+- "Filtreler yalnızca seçilen log formatının desteklediği alanlara uygulanmalıdır" gereksinimi, `AnalysisFilterSupport`'un hem job oluşturulurken (manuel seçimde) hem job çalışırken (AUTO dahil) çağrılmasıyla iki katmanlı olarak karşılandı — bu ikinci katmanın (AUTO için runtime kontrolü) ilk taslakta eksik olduğu, kullanıcının "hiçbir şeyi ertelemeyelim" talebi üzerine tekrar gözden geçirilirken fark edildi ve eklendi.
+
+**Yapay zekânın ürettiği regex ve parser kodlarının nasıl test edildiği:**
+- Her parser için hem doğrudan (inline string) hem fixture dosyası okuyarak çalışan birim testleri yazıldı; `./mvnw test -Dtest=<ParserAdı>Test` ile izole çalıştırıldı.
+- Testcontainers entegrasyon testiyle gerçek bir PostgreSQL'e karşı uçtan uca (job oluşturma → asenkron çalışma → veritabanına yazma) doğrulandı.
+- Ayrıca gerçek, büyük bir dosya (`huge-test.log`, 150.000 satır) tarayıcıda manuel olarak yüklenip sonuç ekranı satır satır incelendi — bu manuel test, otomatik testlerin kaçırdığı gerçek bir eksikliği (`PlainTextLogParser`'ın timestamp ayrıştırmaması) ortaya çıkardı.
+
+**Yapay zekânın ürettiği kodlarda yapılan manuel değişiklikler:**
+- İlk üretilen `AnalysisDetailView.tsx`'te, algılanan format adını (bir string) `StatCard`'a `number` tipine zorlanarak (`as unknown as number`) geçiren "hileli" bir satır fark edilip, `StatCard`'ın `value` prop'u `number | string` kabul edecek şekilde düzeltilerek kaldırıldı.
+- İlk üretilen `AnalysisJobV5PersistenceTest`'te test zaman aşımı 10 saniyeydi; gerçek çalıştırmalarda (özellikle Docker/Testcontainers'ın ilk ısınma süresi nedeniyle) yetersiz kaldığı görülüp 30 saniyeye çıkarıldı, ayrıca zaman aşımında sessizce yanlış veri dönmek yerine açık bir hata fırlatacak şekilde güçlendirildi.
+
+**Reddedilen veya hatalı bulunan öneriler:**
+- İlk yaklaşımda, format uyuşmazlığı sadece manuel parser seçiminde job oluşturma anında kontrol ediliyordu; `AUTO` modunda algılanan format ile uyumsuz bir filtre girildiğinde hiçbir uyarı verilmeden sessizce "0 sonuç" dönmesi, kullanıcının "hiçbir şeyi ertelemeyelim" talebiyle yeniden gözden geçirilirken eksik bulundu ve `AnalysisJobRunner` içine ikinci bir kontrol katmanı eklenerek düzeltildi.
+- Testte `@Transactional` ekleyerek `LazyInitializationException`'ı "çözme" yaklaşımı, async job akışıyla çakıştığı (job'un hiç görünmez kalması) fark edilince reddedildi; yerine `JOIN FETCH` sorgusu tercih edildi.
+
+**V5 sırasında öğrenilen konular:**
+- Strategy ve Factory Pattern'in birlikte kullanımı, Spring'in `List<Interface>` constructor injection'ıyla "kayıt tabanlı" (registry-based) bir mimarinin nasıl kurulduğu
+- Interface/polymorphism'in, yeni bir tür eklerken mevcut kodu değiştirmeden genişletebilme (Open/Closed Principle) için nasıl kullanıldığı
+- Regex'te "felaket geri izleme" (catastrophic backtracking) riski ve girdi boyutu sınırlama ile azaltılması
+- Örnekleme (sampling) ile format/tür tahmini yapmanın güçlü ve zayıf yönleri; bir "güven skoru"nun neyi ifade edip neyi ifade etmediği
+- Durum makinesi (state machine) deseninin, sadece job lifecycle'da değil, satır-satır akan bir metin akışını gruplamak (multiline log kayıtları) için de kullanılabileceği
+- Merkezi, sıralı kural setleriyle (normalizasyon, maskeleme) çalışmanın, dağınık/kopyalanmış mantığa göre hem test edilebilirliği hem bakımı nasıl kolaylaştırdığı
+- Jackson 3.x'in Spring Boot 4.x ile birlikte getirdiği paket adı (namespace) değişikliği ve bunun bağımlılık ağacı (`dependency:tree`) incelenerek nasıl teşhis edildiği
+- `@Transactional` test metotlarının, ayrı bir thread'de çalışan `@Async` servislerle nasıl çakışabileceği (commit edilmemiş veri görünürlüğü sorunu)
+- Otomatik testlerin (ne kadar kapsamlı olursa olsun) gerçek, büyük ve çeşitli veriyle yapılan MANUEL testlerin yerini tutamayacağı — bu projede en az bir gerçek, kullanıcı tarafından bulunan eksiklik (timestamp ayrıştırma) sadece manuel UI testiyle ortaya çıktı
