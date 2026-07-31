@@ -1,0 +1,7 @@
+{"timestamp": "2026-01-01T12:30:15Z", "level": "INFO", "logger": "com.example.payment.PaymentService", "message": "Payment received for order 4521", "thread": "http-nio-8080-exec-1"}
+{"time": "2026-01-01T12:30:16Z", "logLevel": "WARN", "class": "com.example.payment.PaymentService", "msg": "Slow gateway response: 3200ms", "threadName": "http-nio-8080-exec-2"}
+{"@timestamp": "2026-01-01T12:30:17Z", "severity": "ERROR", "source": "com.example.payment.PaymentService", "message": "Payment failed for order 4522"}
+{"timestamp": "2026-01-01T12:30:18Z", "level": "ERROR", "logger": "com.example.user.UserService", "message": "User 98765 not found"}
+{"timestamp": "2026-01-01T12:30:19Z", "level": "ERROR", "logger": "com.example.user.UserService", "message": "User 12345 not found"}
+{"timestamp": 1767270620000, "level": "INFO", "logger": "com.example.cache.CacheWarmer", "message": "Cache refreshed successfully"}
+{"timestamp": "2026-01-01T12:30:21Z", "level": "DEBUG", "logger": "com.example.payment.PaymentService", "message": "Validating payment request"}
