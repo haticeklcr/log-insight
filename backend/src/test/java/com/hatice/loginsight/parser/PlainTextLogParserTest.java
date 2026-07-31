@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlainTextLogParserTest {
@@ -52,5 +53,29 @@ class PlainTextLogParserTest {
 
         assertNotNull(entry);
         assertEquals("this is just a random line with no recognizable level", entry.getMessage());
+    }
+
+    @Test
+    void extractsLeadingTimestampWhenPresent() {
+        ParsedLogEntry entry = parser.parse("2026-01-01 10:00:00 INFO Application heartbeat check completed");
+
+        assertNotNull(entry);
+        assertNotNull(entry.getTimestamp());
+    }
+
+    @Test
+    void leavesTimestampNullWhenLineDoesNotStartWithOne() {
+        ParsedLogEntry entry = parser.parse("Caused by: java.lang.IllegalStateException: connection pool exhausted");
+
+        assertNotNull(entry);
+        assertNull(entry.getTimestamp());
+    }
+
+    @Test
+    void extractsLeadingTimestampWithMilliseconds() {
+        ParsedLogEntry entry = parser.parse("2026-01-01 10:00:00.123 ERROR Connection refused");
+
+        assertNotNull(entry);
+        assertNotNull(entry.getTimestamp());
     }
 }
