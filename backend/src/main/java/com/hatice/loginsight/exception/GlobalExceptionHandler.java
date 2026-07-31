@@ -72,6 +72,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, "RETRY_LIMIT_EXCEEDED", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidParserTypeException.class)
+    public ResponseEntity<ApiError> handleInvalidParserType(InvalidParserTypeException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_PARSER_TYPE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidDateRangeException.class)
+    public ResponseEntity<ApiError> handleInvalidDateRange(InvalidDateRangeException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UnsupportedFilterForParserException.class)
+    public ResponseEntity<ApiError> handleUnsupportedFilterForParser(UnsupportedFilterForParserException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILTER_FOR_PARSER", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(

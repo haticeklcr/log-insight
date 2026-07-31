@@ -2,6 +2,7 @@ package com.hatice.loginsight.controller;
 
 import com.hatice.loginsight.dto.AnalysisJobDetailDto;
 import com.hatice.loginsight.dto.AnalysisJobSummaryDto;
+import com.hatice.loginsight.dto.AppliedFiltersDto;
 import com.hatice.loginsight.dto.CreateAnalysisJobResponse;
 import com.hatice.loginsight.dto.PagedResponse;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
@@ -31,8 +32,19 @@ public class AnalysisJobController {
 
     @PostMapping
     public CreateAnalysisJobResponse createJob(@RequestParam("file") MultipartFile file,
-                                                @RequestParam("analysisName") String analysisName) {
-        AnalysisJobEntity job = analysisJobService.createJob(file, analysisName);
+                                                @RequestParam("analysisName") String analysisName,
+                                                @RequestParam(value = "parserType", required = false) String parserType,
+                                                @RequestParam(value = "startTime", required = false) String startTime,
+                                                @RequestParam(value = "endTime", required = false) String endTime,
+                                                @RequestParam(value = "levels", required = false) String levels,
+                                                @RequestParam(value = "logger", required = false) String logger,
+                                                @RequestParam(value = "thread", required = false) String thread,
+                                                @RequestParam(value = "messageContains", required = false) String messageContains,
+                                                @RequestParam(value = "statusCodes", required = false) String statusCodes,
+                                                @RequestParam(value = "httpMethods", required = false) String httpMethods,
+                                                @RequestParam(value = "pathContains", required = false) String pathContains) {
+        AnalysisJobEntity job = analysisJobService.createJob(file, analysisName, parserType, startTime, endTime,
+                levels, logger, thread, messageContains, statusCodes, httpMethods, pathContains);
         return new CreateAnalysisJobResponse(
                 job.getId(), job.getAnalysisName(), job.getStatus(), job.getProgress(), job.getCreatedAt());
     }
@@ -79,6 +91,9 @@ public class AnalysisJobController {
         dto.setCompletedAt(job.getCompletedAt());
         dto.setErrorCode(job.getErrorCode());
         dto.setAnalysisId(job.getAnalysisId());
+        dto.setRequestedParserType(job.getRequestedParserType());
+        dto.setDetectedLogFormat(job.getDetectedLogFormat());
+        dto.setAppliedFilters(AppliedFiltersDto.from(job));
         return dto;
     }
 

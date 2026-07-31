@@ -3,8 +3,11 @@ package com.hatice.loginsight.service;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
 import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.exception.InvalidAnalysisNameException;
+import com.hatice.loginsight.exception.InvalidDateRangeException;
+import com.hatice.loginsight.exception.InvalidParserTypeException;
 import com.hatice.loginsight.exception.JobNotFoundException;
 import com.hatice.loginsight.exception.JobRetryLimitExceededException;
+import com.hatice.loginsight.parser.LogFormat;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -19,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 
 @Service
@@ -49,8 +53,30 @@ public class AnalysisJobService {
     }
 
     public AnalysisJobEntity createJob(MultipartFile file, String analysisName) {
+        return createJob(file, analysisName, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    public AnalysisJobEntity createJob(MultipartFile file, String analysisName, String parserType,
+                                        String startTime, String endTime, String levels, String logger,
+                                        String thread, String messageContains, String statusCodes,
+                                        String httpMethods, String pathContains) {
         logFileValidator.validate(file);
         String trimmedName = validateAnalysisName(analysisName);
+
+        LogFormat requestedFormat = validateAndParseParserType(parserType);
+        Instant parsedStartTime = parseInstantOrNull(startTime);
+        Instant parsedEndTime = parseInstantOrNull(endTime);
+        validateDateRange(parsedStartTime, parsedEndTime);
+
+        if (requestedFormat != null && requestedFormat != LogFormat.AUTO) {
+            AnalysisFilterSupport.validate(
+                    requestedFormat,
+                    isSet(logger),
+                    isSet(thread),
+                    isSet(statusCodes),
+                    isSet(httpMethods),
+                    isSet(pathContains));
+        }
 
         AnalysisJobEntity job = new AnalysisJobEntity();
         job.setAnalysisName(trimmedName);
@@ -61,6 +87,17 @@ public class AnalysisJobService {
         job.setRetryCount(0);
         job.setCreatedAt(Instant.now());
         job.setCancelRequested(false);
+
+        job.setRequestedParserType(requestedFormat == null ? null : requestedFormat.name());
+        job.setFilterStartTime(parsedStartTime);
+        job.setFilterEndTime(parsedEndTime);
+        job.setFilterLevels(blankToNull(levels));
+        job.setFilterLogger(blankToNull(logger));
+        job.setFilterThread(blankToNull(thread));
+        job.setFilterMessageContains(blankToNull(messageContains));
+        job.setFilterStatusCodes(blankToNull(statusCodes));
+        job.setFilterHttpMethods(blankToNull(httpMethods));
+        job.setFilterPathContains(blankToNull(pathContains));
 
         AnalysisJobEntity savedJob = analysisJobRepository.save(job);
 
@@ -73,6 +110,45 @@ public class AnalysisJobService {
         analysisJobRunner.runAnalysis(savedJob.getId());
 
         return savedJob;
+    }
+
+    private LogFormat validateAndParseParserType(String parserType) {
+        if (parserType == null || parserType.isBlank()) {
+            return null;
+        }
+        try {
+            return LogFormat.valueOf(parserType.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidParserTypeException("Gecersiz parserType: " + parserType);
+        }
+    }
+
+    private Instant parseInstantOrNull(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(rawValue.trim());
+        } catch (DateTimeParseException e) {
+            throw new InvalidDateRangeException("Gecersiz tarih formati: " + rawValue);
+        }
+    }
+
+    private void validateDateRange(Instant startTime, Instant endTime) {
+        if (startTime != null && endTime != null && !endTime.isAfter(startTime)) {
+            throw new InvalidDateRangeException("endTime, startTime'dan sonra olmalidir");
+        }
+    }
+
+    private boolean isSet(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String validateAnalysisName(String analysisName) {
