@@ -1,0 +1,7 @@
+2026-01-01 12:30:15.123 INFO 12345 --- [nio-8080-exec-1] c.e.payment.PaymentService : Payment received for order 4521
+2026-01-01 12:30:16.456 WARN 12345 --- [nio-8080-exec-2] c.e.payment.PaymentService : Slow gateway response: 3200ms
+2026-01-01 12:30:17.789 ERROR 12345 --- [nio-8080-exec-1] c.e.payment.PaymentService : Payment failed for order 4522
+2026-01-01 12:30:18.012 ERROR 12345 --- [nio-8080-exec-3] c.e.user.UserService : User 98765 not found
+2026-01-01 12:30:19.345 ERROR 12345 --- [nio-8080-exec-3] c.e.user.UserService : User 12345 not found
+2026-01-01 12:30:20.678 INFO 12345 --- [scheduling-1] c.e.cache.CacheWarmer : Cache refreshed successfully
+2026-01-01 12:30:21.901 DEBUG 12345 --- [nio-8080-exec-4] c.e.payment.PaymentService : Validating payment request
