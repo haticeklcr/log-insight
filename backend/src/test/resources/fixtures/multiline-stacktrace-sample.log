@@ -1,0 +1,8 @@
+2026-01-01 12:30:30.000 ERROR 12345 --- [nio-8080-exec-5] c.e.payment.PaymentService : Payment processing failed
+java.lang.NullPointerException: Cannot invoke "PaymentGateway.charge()" because gateway is null
+	at com.example.payment.PaymentService.process(PaymentService.java:45)
+	at com.example.payment.PaymentController.handle(PaymentController.java:22)
+Caused by: java.lang.IllegalStateException: connection pool exhausted
+	at com.example.db.ConnectionPool.borrow(ConnectionPool.java:88)
+	... 3 more
+2026-01-01 12:30:31.000 INFO 12345 --- [nio-8080-exec-6] c.e.payment.PaymentService : Retry scheduled
