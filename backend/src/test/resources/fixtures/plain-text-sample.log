@@ -1,0 +1,11 @@
+2026-07-21 10:00:01 INFO Application started successfully
+2026-07-21 10:00:05 INFO User login: hatice
+2026-07-21 10:00:12 WARN Slow response time detected: 3200ms
+2026-07-21 10:00:20 ERROR Connection refused: database unreachable
+2026-07-21 10:00:21 ERROR Connection refused: database unreachable
+2026-07-21 10:00:25 WARNING Disk usage above threshold: 85%
+2026-07-21 10:00:30 ERROR NullPointerException at PaymentService.java:88
+Caused by: java.lang.IllegalStateException: connection pool exhausted
+2026-07-21 10:00:35 DEBUG Cache lookup miss for key: session-42
+2026-07-21 10:00:40 TRACE Entering method calculateTotal()
+this is just a random line with no recognizable level
