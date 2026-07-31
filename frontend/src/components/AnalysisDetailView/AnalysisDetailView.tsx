@@ -18,6 +18,7 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
   const showFormatInfo = Boolean(detail.detectedLogFormat);
   const showHttpStats = (detail.statusCodeDistribution?.length ?? 0) > 0
     || (detail.httpMethodDistribution?.length ?? 0) > 0;
+  const hasMaskableErrors = detail.mostFrequentErrors.length > 0;
 
   return (
     <div className={styles.container}>
@@ -44,7 +45,11 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
         <section>
           <h3 className={styles.sectionTitle}>{t("analysisDetail.formatInfo")}</h3>
           <div className={styles.cards}>
-            <StatCard label={t("analysisDetail.detectedFormat")} value={detail.detectedLogFormat as unknown as number} />
+            <StatCard
+              label={t("analysisDetail.requestedParser")}
+              value={detail.requestedParserType ?? t("analysisDetail.autoDetect")}
+            />
+            <StatCard label={t("analysisDetail.detectedFormat")} value={detail.detectedLogFormat ?? ""} />
             {detail.parseQualityScore != null && (
               <StatCard label={t("analysisDetail.parseQualityScore")} value={detail.parseQualityScore} />
             )}
@@ -57,8 +62,20 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
             {detail.unparsedLineCount != null && (
               <StatCard label={t("analysisDetail.unparsedLineCount")} value={detail.unparsedLineCount} />
             )}
+            {detail.unparsedLinePercentage != null && (
+              <StatCard
+                label={t("analysisDetail.unparsedLinePercentage")}
+                value={`%${detail.unparsedLinePercentage.toFixed(1)}`}
+              />
+            )}
             {detail.multilineExceptionCount != null && (
               <StatCard label={t("analysisDetail.multilineExceptionCount")} value={detail.multilineExceptionCount} />
+            )}
+            {detail.firstLogTimestamp != null && (
+              <StatCard label={t("analysisDetail.firstLogTimestamp")} value={formatDateTime(detail.firstLogTimestamp)} />
+            )}
+            {detail.lastLogTimestamp != null && (
+              <StatCard label={t("analysisDetail.lastLogTimestamp")} value={formatDateTime(detail.lastLogTimestamp)} />
             )}
           </div>
         </section>
@@ -66,6 +83,7 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
 
       <section>
         <h3 className={styles.sectionTitle}>{t("analysisDetail.mostFrequentErrors")}</h3>
+        {hasMaskableErrors && <p className={styles.maskingNote}>{t("analysisDetail.sensitiveDataMasked")}</p>}
         <FrequentErrorsTable errors={detail.mostFrequentErrors} />
       </section>
 

@@ -191,7 +191,13 @@
     "statusCode": "Status Code",
     "httpMethod": "HTTP Method",
     "count": "Count",
-    "noData": "No data available for this log format."
+    "noData": "No data available for this log format.",
+    "requestedParser": "Selected Parser",
+    "autoDetect": "Auto-detect",
+    "unparsedLinePercentage": "Unparsed Line Percentage",
+    "firstLogTimestamp": "First Log Timestamp",
+    "lastLogTimestamp": "Last Log Timestamp",
+    "sensitiveDataMasked": "Sensitive data (passwords, tokens, emails, etc.) has been masked."
     },
   "frequentErrorsTable": {
     "empty": "No repeated error messages found.",

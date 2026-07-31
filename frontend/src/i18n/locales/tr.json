@@ -191,7 +191,13 @@
     "statusCode": "Status Code",
     "httpMethod": "HTTP Method",
     "count": "Sayı",
-    "noData": "Bu log formatında veri bulunamadı."
+    "noData": "Bu log formatında veri bulunamadı.",
+    "requestedParser": "Seçilen Parser",
+    "autoDetect": "Otomatik Algıla",
+    "unparsedLinePercentage": "Parse Başarı Yüzdesi (Kalan)",
+    "firstLogTimestamp": "İlk Log Zamanı",
+    "lastLogTimestamp": "Son Log Zamanı",
+    "sensitiveDataMasked": "Hassas veriler (şifre, token, e-posta vb.) maskelenmiştir."
     },
   "frequentErrorsTable": {
     "empty": "Tekrar eden hata mesajı bulunamadı.",

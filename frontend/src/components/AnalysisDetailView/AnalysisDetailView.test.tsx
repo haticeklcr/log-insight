@@ -108,4 +108,47 @@ describe("AnalysisDetailView", () => {
     expect(screen.getByText("User <NUMBER> not found")).toBeInTheDocument();
     expect(screen.getByText("User 98765 not found")).toBeInTheDocument();
   });
+
+  it("maskelenmiş bir mesajı olduğu gibi gösterir ve maskeleme notunu görüntüler", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      mostFrequentErrors: [
+        { message: "Authorization: Bearer ****", normalizedMessage: "Authorization: Bearer ****", count: 1 },
+      ],
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getAllByText("Authorization: Bearer ****").length).toBeGreaterThan(0);
+    expect(screen.getByText(/maskelenmiştir/)).toBeInTheDocument();
+  });
+
+  it("thread istatistiği olduğunda thread tablosunu gösterir", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      detectedLogFormat: "SPRING_BOOT",
+      mostFrequentThreads: [{ threadName: "nio-8080-exec-1", count: 8 }],
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getByText("nio-8080-exec-1")).toBeInTheDocument();
+    expect(screen.getByText("8")).toBeInTheDocument();
+  });
+
+  it("seçilen parser, ilk/son log zamanı ve parse başarı yüzdesini gösterir", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      requestedParserType: "SPRING_BOOT",
+      detectedLogFormat: "SPRING_BOOT",
+      firstLogTimestamp: "2026-01-01T10:00:00Z",
+      lastLogTimestamp: "2026-01-01T11:00:00Z",
+      unparsedLinePercentage: 2.5,
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getAllByText("SPRING_BOOT").length).toBe(2);
+    expect(screen.getByText("%2.5")).toBeInTheDocument();
+  });
 });

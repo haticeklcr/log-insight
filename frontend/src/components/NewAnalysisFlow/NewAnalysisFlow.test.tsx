@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { LogAnalysisApiError } from "../../services/logAnalysisApi";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import NewAnalysisFlow from "./NewAnalysisFlow";
@@ -133,5 +134,25 @@ describe("NewAnalysisFlow", () => {
       "Test Analizi",
       expect.objectContaining({ levels: ["ERROR"] }),
     );
+  });
+
+  it("geçersiz tarih aralığı backend'den dönünce hata mesajını gösterir", async () => {
+    mockedApi.createAnalysisJob.mockRejectedValue(
+      new LogAnalysisApiError({
+        error: "INVALID_DATE_RANGE",
+        message: "endTime, startTime'dan sonra olmalidir",
+        timestamp: "2026-01-01T10:00:00Z",
+        status: 400,
+        path: "/api/v1/analysis-jobs",
+      })
+    );
+
+    render(<NewAnalysisFlow onJobCreated={onJobCreated} />);
+
+    await userEvent.type(screen.getByTestId("analysis-name-input"), "Test Analizi");
+    await userEvent.upload(screen.getByTestId("file-input"), sampleFile());
+    await userEvent.click(screen.getByRole("button", { name: "Analiz Et" }));
+
+    expect(await screen.findByText("Geçersiz tarih aralığı")).toBeInTheDocument();
   });
 });

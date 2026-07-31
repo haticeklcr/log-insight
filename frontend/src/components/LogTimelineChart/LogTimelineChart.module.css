@@ -1,3 +1,28 @@
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: #d0d0d0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.legendDot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.infoColor { background-color: #4a9eff; }
+.warnColor { background-color: #f5c518; }
+.errorColor { background-color: #ff5c5c; }
+
 .chart {
   display: flex;
   align-items: flex-end;
@@ -16,27 +41,28 @@
 }
 
 .barTrack {
-  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: flex-end;
 }
 
-.barTotalPortion {
+.infoSegment {
   width: 100%;
   background-color: #4a9eff;
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
+  min-height: 0;
 }
 
-.barErrorPortion {
-  position: absolute;
-  bottom: 0;
+.warnSegment {
+  width: 100%;
+  background-color: #f5c518;
+  min-height: 0;
+}
+
+.errorSegment {
   width: 100%;
   background-color: #ff5c5c;
-  border-radius: 2px 2px 0 0;
-  z-index: 1;
+  min-height: 0;
 }
 
 .empty {

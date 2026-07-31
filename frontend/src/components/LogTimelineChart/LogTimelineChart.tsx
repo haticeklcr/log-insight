@@ -17,19 +17,37 @@ export default function LogTimelineChart({ buckets }: LogTimelineChartProps) {
   const maxCount = Math.max(...buckets.map((bucket) => bucket.totalCount), 1);
 
   return (
-    <div className={styles.chart} data-testid="log-timeline-chart">
-      {buckets.map((bucket) => {
-        const heightPercent = Math.round((bucket.totalCount / maxCount) * 100);
-        const tooltip = `${formatDateTime(bucket.bucketStart)} — ${t("common.totalLines")}: ${bucket.totalCount}, ${t("common.error")}: ${bucket.errorCount}`;
-        return (
-          <div key={bucket.bucketStart} className={styles.barColumn} title={tooltip}>
-            <div className={styles.barTrack}>
-              <div className={styles.barErrorPortion} style={{ height: `${Math.round((bucket.errorCount / maxCount) * 100)}%` }} />
-              <div className={styles.barTotalPortion} style={{ height: `${heightPercent}%` }} />
+    <div>
+      <div className={styles.legend}>
+        <span className={styles.legendItem}>
+          <span className={`${styles.legendDot} ${styles.infoColor}`} /> {t("common.info")}
+        </span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.legendDot} ${styles.warnColor}`} /> {t("common.warning")}
+        </span>
+        <span className={styles.legendItem}>
+          <span className={`${styles.legendDot} ${styles.errorColor}`} /> {t("common.error")}
+        </span>
+      </div>
+      <div className={styles.chart} data-testid="log-timeline-chart">
+        {buckets.map((bucket) => {
+          const tooltip = `${formatDateTime(bucket.bucketStart)} — ${t("common.totalLines")}: ${bucket.totalCount}, `
+            + `${t("common.info")}: ${bucket.infoCount}, ${t("common.warning")}: ${bucket.warnCount}, `
+            + `${t("common.error")}: ${bucket.errorCount}`;
+          const infoHeight = Math.round((bucket.infoCount / maxCount) * 100);
+          const warnHeight = Math.round((bucket.warnCount / maxCount) * 100);
+          const errorHeight = Math.round((bucket.errorCount / maxCount) * 100);
+          return (
+            <div key={bucket.bucketStart} className={styles.barColumn} title={tooltip}>
+              <div className={styles.barTrack}>
+                <div className={styles.errorSegment} style={{ height: `${errorHeight}%` }} />
+                <div className={styles.warnSegment} style={{ height: `${warnHeight}%` }} />
+                <div className={styles.infoSegment} style={{ height: `${infoHeight}%` }} />
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

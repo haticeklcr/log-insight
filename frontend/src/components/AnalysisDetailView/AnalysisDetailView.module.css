@@ -39,3 +39,9 @@
   font-size: 1.05rem;
   color: #d0d0d0;
 }
+
+.maskingNote {
+  color: #a0a0a0;
+  font-size: 0.8rem;
+  margin: 0 0 0.5rem 0;
+}
