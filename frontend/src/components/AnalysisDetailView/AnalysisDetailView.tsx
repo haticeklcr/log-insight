@@ -35,10 +35,10 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
 
       <div className={styles.cards}>
         <StatCard label={t("common.totalLines")} value={detail.totalLines} />
-        <StatCard label={t("common.info")} value={detail.infoCount} />
-        <StatCard label={t("common.warning")} value={detail.warningCount} />
-        <StatCard label={t("common.error")} value={detail.errorCount} />
-        <StatCard label={t("common.exception")} value={detail.exceptionCount} />
+        <StatCard label={t("common.info")} value={detail.infoCount} variant="info" />
+        <StatCard label={t("common.warning")} value={detail.warningCount} variant="warning" />
+        <StatCard label={t("common.error")} value={detail.errorCount} variant="error" />
+        <StatCard label={t("common.exception")} value={detail.exceptionCount} variant="exception" />
       </div>
 
       {showFormatInfo && (

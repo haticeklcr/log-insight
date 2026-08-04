@@ -4,29 +4,21 @@ import type { SupportedLanguage } from "../../i18n";
 
 export default function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
+  const current = i18n.language as SupportedLanguage;
+  const target: SupportedLanguage = current === "tr" ? "en" : "tr";
 
-  function handleChange(language: SupportedLanguage) {
-    i18n.changeLanguage(language);
+  function handleClick() {
+    i18n.changeLanguage(target);
   }
 
   return (
-    <div className={styles.container} role="group" aria-label="Dil seçimi">
-      <button
-        type="button"
-        className={`${styles.option} ${i18n.language === "tr" ? styles.active : ""}`}
-        onClick={() => handleChange("tr")}
-        title={t("language.turkish")}
-      >
-        TR
-      </button>
-      <button
-        type="button"
-        className={`${styles.option} ${i18n.language === "en" ? styles.active : ""}`}
-        onClick={() => handleChange("en")}
-        title={t("language.english")}
-      >
-        EN
-      </button>
-    </div>
+    <button
+      type="button"
+      className={styles.button}
+      onClick={handleClick}
+      title={target === "en" ? t("language.english") : t("language.turkish")}
+    >
+      {target === "en" ? "EN" : "TR"}
+    </button>
   );
 }

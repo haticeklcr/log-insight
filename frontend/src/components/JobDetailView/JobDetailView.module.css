@@ -10,7 +10,7 @@
   align-self: flex-start;
   background: none;
   border: none;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 0.85rem;
   padding: 0;
@@ -24,12 +24,12 @@
 
 .title {
   margin: 0;
-  color: #f0f0f0;
+  color: var(--color-text-primary);
   font-size: 1.2rem;
 }
 
 .pollingWarning {
-  color: #e0c060;
+  color: var(--color-warning-text);
   font-size: 0.85rem;
 }
 
@@ -38,13 +38,13 @@
   width: 100%;
   height: 1.4rem;
   border-radius: 0.7rem;
-  background-color: #2a2a2a;
+  background-color: var(--color-bg-surface-hover);
   overflow: hidden;
 }
 
 .progressBarInner {
   height: 100%;
-  background-color: #4a7fd6;
+  background-color: var(--color-accent);
   transition: width 0.3s ease;
 }
 
@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f0f0f0;
+  color: var(--color-text-primary);
   font-size: 0.75rem;
 }
 
@@ -66,18 +66,18 @@
 }
 
 .detailList dt {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
 .detailList dd {
-  color: #e0e0e0;
+  color: var(--color-text-secondary);
   font-size: 0.85rem;
   margin: 0;
 }
 
 .errorInfo {
-  color: #ffb3b3;
+  color: var(--color-error-text);
   font-size: 0.85rem;
 }
 
@@ -91,22 +91,22 @@
 .resultButton {
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--color-border);
   cursor: pointer;
   font-size: 0.85rem;
 }
 
 .cancelButton {
-  background-color: #3a2020;
-  color: #ffb3b3;
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .retryButton {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .resultButton {
-  background-color: #1f3a2a;
-  color: #90e0a0;
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
 }

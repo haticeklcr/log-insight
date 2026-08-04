@@ -10,35 +10,35 @@
   align-items: center;
   gap: 0.75rem;
   padding: 2rem;
-  border: 2px dashed #3a3a3a;
+  border: 2px dashed var(--color-border);
   border-radius: 0.75rem;
-  background-color: #1a1a1a;
+  background-color: var(--color-bg-sunken);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .dropzoneActive {
-  border-color: #4f8cff;
-  background-color: #1e2430;
+  border-color: var(--color-accent-strong);
+  background-color: var(--color-accent-bg-subtle);
 }
 
 .dropzoneText {
   margin: 0;
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 0.95rem;
 }
 
 .selectButton {
   padding: 0.5rem 1.25rem;
   border-radius: 0.5rem;
-  border: 1px solid #3a3a3a;
-  background-color: #2a2a2a;
-  color: #f0f0f0;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-text-primary);
   cursor: pointer;
   font-size: 0.9rem;
 }
 
 .selectButton:hover:not(:disabled) {
-  background-color: #333333;
+  background-color: var(--color-border);
 }
 
 .selectButton:disabled {
@@ -54,24 +54,24 @@
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 1rem;
-  background-color: #1e1e1e;
+  background-color: var(--color-bg-surface);
   border-radius: 0.5rem;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--color-bg-surface-hover);
   font-size: 0.9rem;
 }
 
 .fileName {
-  color: #f0f0f0;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
 .fileSize {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
 }
 
 .validationError {
   margin: 0;
-  color: #e74c3c;
+  color: var(--color-status-offline);
   font-size: 0.9rem;
 }
 
@@ -79,8 +79,8 @@
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   border: none;
-  background-color: #4f8cff;
-  color: #ffffff;
+  background-color: var(--color-accent-strong);
+  color: var(--color-text-on-accent);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -88,7 +88,7 @@
 }
 
 .analyzeButton:hover:not(:disabled) {
-  background-color: #3d78e6;
+  background-color: var(--color-accent);
 }
 
 .analyzeButton:disabled {

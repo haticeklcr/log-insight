@@ -7,26 +7,26 @@
 }
 
 .pending {
-  background-color: #3a3a2a;
-  color: #e0d090;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .running {
-  background-color: #2a3550;
-  color: #90b0f0;
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
 }
 
 .succeeded {
-  background-color: #1f3a2a;
-  color: #90e0a0;
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .failed {
-  background-color: #3a2020;
-  color: #ffb3b3;
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .cancelled {
-  background-color: #2a2a2a;
-  color: #a0a0a0;
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-text-muted);
 }

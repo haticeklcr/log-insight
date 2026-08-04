@@ -12,10 +12,10 @@ export default function AnalysisSummary({ result }: AnalysisSummaryProps) {
       <h2 className={styles.title}>{result.fileName}</h2>
       <div className={styles.cards}>
         <StatCard label="Toplam Satır" value={result.totalLines} />
-        <StatCard label="INFO" value={result.infoCount} />
-        <StatCard label="WARN" value={result.warningCount} />
-        <StatCard label="ERROR" value={result.errorCount} />
-        <StatCard label="Exception" value={result.exceptionCount} />
+        <StatCard label="INFO" value={result.infoCount} variant="info" />
+        <StatCard label="WARN" value={result.warningCount} variant="warning" />
+        <StatCard label="ERROR" value={result.errorCount} variant="error" />
+        <StatCard label="Exception" value={result.exceptionCount} variant="exception" />
       </div>
     </section>
   );

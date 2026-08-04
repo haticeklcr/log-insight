@@ -3,7 +3,7 @@
   gap: 1rem;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  color: #d0d0d0;
+  color: var(--color-text-secondary);
 }
 
 .legendItem {
@@ -19,16 +19,16 @@
   display: inline-block;
 }
 
-.infoColor { background-color: #4a9eff; }
-.warnColor { background-color: #f5c518; }
-.errorColor { background-color: #ff5c5c; }
+.infoColor { background-color: var(--color-chart-info); }
+.warnColor { background-color: var(--color-chart-warn); }
+.errorColor { background-color: var(--color-chart-error); }
 
 .chart {
   display: flex;
   align-items: flex-end;
   gap: 2px;
   height: 8rem;
-  background-color: #1e1e1e;
+  background-color: var(--color-bg-surface);
   border-radius: 0.5rem;
   padding: 0.75rem;
 }
@@ -49,23 +49,23 @@
 
 .infoSegment {
   width: 100%;
-  background-color: #4a9eff;
+  background-color: var(--color-chart-info);
   min-height: 0;
 }
 
 .warnSegment {
   width: 100%;
-  background-color: #f5c518;
+  background-color: var(--color-chart-warn);
   min-height: 0;
 }
 
 .errorSegment {
   width: 100%;
-  background-color: #ff5c5c;
+  background-color: var(--color-chart-error);
   min-height: 0;
 }
 
 .empty {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }

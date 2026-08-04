@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import styles from "./Header.module.css";
 import BackendStatus from "../BackendStatus/BackendStatus";
 import LanguageSwitcher from "../LanguageSwitcher/LanguageSwitcher";
+import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
 
 export default function Header() {
   const { t } = useTranslation();
@@ -14,6 +15,8 @@ export default function Header() {
       </div>
       <div className={styles.rightGroup}>
         <BackendStatus />
+        <span className={styles.divider} />
+        <ThemeSwitcher />
         <LanguageSwitcher />
       </div>
     </header>
