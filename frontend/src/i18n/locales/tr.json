@@ -209,5 +209,12 @@
     "checking": "Kontrol ediliyor...",
     "up": "Servis çalışıyor",
     "down": "Servise ulaşılamıyor"
-  }
+  },
+  "theme": {
+  "label": "Tema seçimi",
+  "dark": "Koyu Tema",
+  "light": "Açık Tema",
+  "darkShort": "Koyu",
+  "lightShort": "Açık"
+}
 }

@@ -209,5 +209,12 @@
     "checking": "Checking...",
     "up": "Service is running",
     "down": "Service unreachable"
-  }
+  },
+  "theme": {
+  "label": "Theme selection",
+  "dark": "Dark Theme",
+  "light": "Light Theme",
+  "darkShort": "Dark",
+  "lightShort": "Light"
+}
 }
