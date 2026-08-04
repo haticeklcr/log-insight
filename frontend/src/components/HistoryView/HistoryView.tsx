@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import styles from "./HistoryView.module.css";
 import HistoryTable from "../HistoryTable/HistoryTable";
 import Pagination from "../Pagination/Pagination";
-import SearchFilterBar from "../SearchFilterBar/SearchFilterBar";
 import DeleteConfirmDialog from "../DeleteConfirmDialog/DeleteConfirmDialog";
 import LoadingIndicator from "../LoadingIndicator/LoadingIndicator";
 import ErrorAlert from "../ErrorAlert/ErrorAlert";
@@ -19,9 +18,15 @@ const PAGE_SIZE = 10;
 export default function HistoryView({ onViewDetail }: HistoryViewProps) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
+
+  const [draftFileName, setDraftFileName] = useState("");
+  const [draftAnalysisName, setDraftAnalysisName] = useState("");
+  const [draftMinErrorCount, setDraftMinErrorCount] = useState("");
+
   const [fileNameFilter, setFileNameFilter] = useState("");
   const [analysisNameFilter, setAnalysisNameFilter] = useState("");
   const [minErrorCountFilter, setMinErrorCountFilter] = useState<number | undefined>(undefined);
+
   const [data, setData] = useState<PagedResponse<AnalysisSummary> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,10 +56,10 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
     loadData();
   }, [loadData]);
 
-  function handleApplyFilters(fileName: string, analysisName: string, minErrorCount: string) {
-    setFileNameFilter(fileName);
-    setAnalysisNameFilter(analysisName);
-    setMinErrorCountFilter(minErrorCount ? Number(minErrorCount) : undefined);
+  function handleApplyFilters() {
+    setFileNameFilter(draftFileName);
+    setAnalysisNameFilter(draftAnalysisName);
+    setMinErrorCountFilter(draftMinErrorCount ? Number(draftMinErrorCount) : undefined);
     setPage(0);
   }
 
@@ -75,8 +80,6 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
 
   return (
     <div className={styles.container}>
-      <SearchFilterBar onApply={handleApplyFilters} />
-
       {successMessage && <p className={styles.success}>{successMessage}</p>}
       {isLoading && <LoadingIndicator />}
       {errorMessage && <ErrorAlert message={errorMessage} />}
@@ -91,6 +94,13 @@ export default function HistoryView({ onViewDetail }: HistoryViewProps) {
             analyses={data.content}
             onViewDetail={onViewDetail}
             onDelete={(analysis) => setPendingDelete(analysis)}
+            analysisNameFilter={draftAnalysisName}
+            fileNameFilter={draftFileName}
+            minErrorCountFilter={draftMinErrorCount}
+            onAnalysisNameFilterChange={setDraftAnalysisName}
+            onFileNameFilterChange={setDraftFileName}
+            onMinErrorCountFilterChange={setDraftMinErrorCount}
+            onApplyFilters={handleApplyFilters}
           />
           <Pagination
             page={data.page}

@@ -5,7 +5,7 @@
 }
 
 .empty {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   text-align: center;
   padding: 2rem 0;
 }

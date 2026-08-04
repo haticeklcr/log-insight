@@ -1,7 +1,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #1e1e1e;
+  background-color: var(--color-bg-surface);
   border-radius: 0.5rem;
   overflow: hidden;
 }
@@ -9,16 +9,16 @@
 .headerCell {
   text-align: left;
   padding: 0.65rem 0.85rem;
-  background-color: #262626;
-  color: #d0d0d0;
+  background-color: var(--color-bg-surface-alt);
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .cell {
   padding: 0.6rem 0.85rem;
-  border-top: 1px solid #2a2a2a;
-  color: #e0e0e0;
+  border-top: 1px solid var(--color-bg-surface-hover);
+  color: var(--color-text-secondary);
   font-size: 0.85rem;
 }
 
@@ -27,14 +27,44 @@
   padding: 0.3rem 0.7rem;
   margin-right: 0.4rem;
   border-radius: 0.4rem;
-  border: 1px solid #3a3a3a;
-  background-color: #2a2a2a;
-  color: #f0f0f0;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-text-primary);
   cursor: pointer;
   font-size: 0.8rem;
 }
 
 .deleteButton {
-  border-color: #6b2b2b;
-  color: #ffb3b3;
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+.filterRow {
+  background-color: var(--color-bg-sunken);
+}
+
+.filterCell {
+  padding: 0.4rem 0.85rem;
+}
+
+.filterInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+}
+
+.applyButton {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
