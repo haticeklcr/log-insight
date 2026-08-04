@@ -67,12 +67,12 @@ Ayrıştırılan alanlar: `timestamp`, `level`, `thread`, `logger`, `message`. (
 Alan adı esnekliği desteklenir: `timestamp`/`time`/`@timestamp`, `level`/`logLevel`/`severity`, `logger`/`class`/`source`, `message`/`msg`, `thread`/`threadName`. Timestamp hem ISO-8601 metin hem epoch milisaniye olarak kabul edilir.
 
 ### Nginx Access Log
-Örnek fixture: `fixtures/nginx-access-sample.log` ("common" format — referrer/user-agent olmadan)
+Örnek fixture: `fixtures/nginx-access-sample.log` ("common" format — referrer/user-agent olmadan). Ayrıştırılan alanlar: `clientIp`, `timestamp`, `method`, `path`, `protocol`, `statusCode`, `responseSize`. **`userAgent` bu formatta hiç doldurulmaz** — çünkü gerçek Nginx "common" log formatının satırında bu bilgi zaten hiç bulunmaz (spec bunu Nginx için beklenen bir alan olarak listeliyor olsa da, seçtiğimiz "common" kalıbı fiziksel olarak bu veriyi içermiyor).
 
 ### Apache Access Log
-Örnek fixture: `fixtures/apache-access-sample.log` ("combined" format — referrer/user-agent ile)
+Örnek fixture: `fixtures/apache-access-sample.log` ("combined" format — referrer/user-agent ile). Ayrıştırılan alanlar: `clientIp`, `timestamp`, `method`, `path`, `protocol`, `statusCode`, `responseSize`, `referrer`, `userAgent`.
 
-**Nginx/Apache ayrımı:** İkisi de aynı temel regex yapısını kullanır (`HttpAccessLogFormat`); ayrım, satırın referrer/user-agent alanları İÇERİP İÇERMEDİĞİNE göre yapılır — "common" formatı sadece Nginx'e, "combined" formatı sadece Apache'ye atanmıştır. Bu, gerçek dünyada Nginx'in de combined format üretebileceği gerçeğinin bilinçli bir basitleştirmesidir (bkz. [Bilinen Eksikler](#bilinen-eksikler)).
+**Nginx/Apache ayrımı:** İkisi de aynı temel regex yapısını kullanır (`HttpAccessLogFormat`); ayrım, satırın referrer/user-agent alanları İÇERİP İÇERMEDİĞİNE göre yapılır — "common" formatı sadece Nginx'e, "combined" formatı sadece Apache'ye atanmıştır. Bu, gerçek dünyada Nginx'in de combined format üretebileceği (ve bu durumda userAgent içerebileceği) gerçeğinin bilinçli bir basitleştirmesidir (bkz. [Bilinen Eksikler](#bilinen-eksikler)).
 
 Her iki formatta da HTTP status code'undan bir log seviyesi türetilir: `5xx → ERROR`, `4xx → WARN`, diğerleri → `INFO` (spec'in bunu açıkça istemediği ama V1-V4'ten gelen level sayaçlarının HTTP loglarında da anlamlı kalması için alınmış bir tasarım kararı).
 

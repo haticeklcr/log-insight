@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NginxAccessLogParserTest {
@@ -61,5 +62,18 @@ class NginxAccessLogParserTest {
 
         assertNotNull(entry);
         assertEquals("INFO", entry.getLevel());
+    }
+
+    @Test
+    void parsesClientIpAndResponseSize() {
+        String line = "192.168.1.10 - - [01/Jan/2026:12:30:15 +0300] \"GET /index.html HTTP/1.1\" 200 1024";
+
+        ParsedLogEntry entry = parser.parse(line);
+
+        assertNotNull(entry);
+        assertEquals("192.168.1.10", entry.getClientIp());
+        assertEquals("HTTP/1.1", entry.getProtocol());
+        assertEquals(1024L, entry.getResponseSize());
+        assertNull(entry.getUserAgent());
     }
 }

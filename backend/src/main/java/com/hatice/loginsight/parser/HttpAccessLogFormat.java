@@ -9,15 +9,12 @@ import java.util.regex.Pattern;
 
 final class HttpAccessLogFormat {
 
-    
     static final Pattern COMMON_PATTERN = Pattern.compile(
             "^(\\S+) \\S+ \\S+ \\[([^]]+)] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\S+)$");
 
-    
     static final Pattern COMBINED_PATTERN = Pattern.compile(
             "^(\\S+) \\S+ \\S+ \\[([^]]+)] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\S+) \"([^\"]*)\" \"([^\"]*)\"$");
 
-    
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.ENGLISH);
 
@@ -29,8 +26,8 @@ final class HttpAccessLogFormat {
         if (!matcher.matches()) {
             return null;
         }
-        return build(sourceFormat, rawLine, matcher.group(2), matcher.group(3),
-                matcher.group(4), matcher.group(5), matcher.group(6));
+        return build(sourceFormat, rawLine, matcher.group(1), matcher.group(2), matcher.group(3),
+                matcher.group(4), matcher.group(5), matcher.group(6), matcher.group(7), null, null);
     }
 
     static ParsedLogEntry parseCombined(String rawLine, LogFormat sourceFormat) {
@@ -38,18 +35,25 @@ final class HttpAccessLogFormat {
         if (!matcher.matches()) {
             return null;
         }
-        return build(sourceFormat, rawLine, matcher.group(2), matcher.group(3),
-                matcher.group(4), matcher.group(5), matcher.group(6));
+        return build(sourceFormat, rawLine, matcher.group(1), matcher.group(2), matcher.group(3),
+                matcher.group(4), matcher.group(5), matcher.group(6), matcher.group(7),
+                matcher.group(8), matcher.group(9));
     }
 
-    private static ParsedLogEntry build(LogFormat sourceFormat, String rawLine, String timestampRaw,
-                                         String method, String path, String protocol, String statusCodeRaw) {
+    private static ParsedLogEntry build(LogFormat sourceFormat, String rawLine, String clientIp,
+                                         String timestampRaw, String method, String path, String protocol,
+                                         String statusCodeRaw, String responseSizeRaw, String referrer,
+                                         String userAgent) {
         ParsedLogEntry entry = new ParsedLogEntry();
         entry.setSourceFormat(sourceFormat);
         entry.setRawLine(rawLine);
+        entry.setClientIp(clientIp);
         entry.setMethod(method);
         entry.setPath(path);
+        entry.setProtocol(protocol);
         entry.setMessage(method + " " + path + " " + protocol);
+        entry.setReferrer(referrer);
+        entry.setUserAgent(userAgent);
 
         try {
             entry.setTimestamp(parseTimestamp(timestampRaw));
@@ -64,6 +68,12 @@ final class HttpAccessLogFormat {
         } catch (NumberFormatException e) {
             entry.setStatusCode(null);
             entry.setLevel(null);
+        }
+
+        try {
+            entry.setResponseSize(Long.parseLong(responseSizeRaw));
+        } catch (NumberFormatException e) {
+            entry.setResponseSize(null);
         }
 
         return entry;

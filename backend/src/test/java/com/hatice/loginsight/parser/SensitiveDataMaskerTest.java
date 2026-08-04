@@ -2,6 +2,12 @@ package com.hatice.loginsight.parser;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -59,5 +65,20 @@ class SensitiveDataMaskerTest {
     @Test
     void returnsNullForNullInput() {
         assertNull(masker.mask(null));
+    }
+
+    @Test
+    void masksEveryLineInSensitiveDataFixture() throws IOException {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("fixtures/sensitive-data-sample.log");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line;
+            int lineCount = 0;
+            while ((line = reader.readLine()) != null) {
+                lineCount++;
+                String masked = masker.mask(line);
+                assertTrue(masked.contains("****"), "Satir maskelenmis olmali: " + line);
+            }
+            assertEquals(9, lineCount);
+        }
     }
 }

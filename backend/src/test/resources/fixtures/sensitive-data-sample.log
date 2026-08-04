@@ -1,0 +1,9 @@
+2026-01-01 12:30:15.000 INFO 1 --- [nio-8080-exec-1] c.e.auth.AuthService : Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.fake.payload
+2026-01-01 12:30:16.000 INFO 1 --- [nio-8080-exec-2] c.e.auth.AuthService : Authorization: Basic ZmFrZXVzZXI6ZmFrZXBhc3M=
+2026-01-01 12:30:17.000 WARN 1 --- [nio-8080-exec-3] c.e.user.UserService : Login attempt from test.user@example.com failed
+2026-01-01 12:30:18.000 INFO 1 --- [nio-8080-exec-4] c.e.payment.PaymentService : Card number 4111 1111 1111 1111 charged
+2026-01-01 12:30:19.000 ERROR 1 --- [nio-8080-exec-5] c.e.auth.AuthService : password=SuperFakeSecret123 rejected
+2026-01-01 12:30:20.000 INFO 1 --- [nio-8080-exec-6] c.e.integration.PartnerClient : api_key=sk-fake1234567890abcdef sent
+2026-01-01 12:30:21.000 INFO 1 --- [nio-8080-exec-7] c.e.session.SessionService : Cookie: session_id=fakesessionid1234567890
+2026-01-01 12:30:22.000 INFO 1 --- [nio-8080-exec-8] c.e.auth.AuthService : access_token=fake-access-token-abc123 issued
+2026-01-01 12:30:23.000 INFO 1 --- [nio-8080-exec-9] c.e.auth.AuthService : refresh_token=fake-refresh-token-xyz789 issued

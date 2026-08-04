@@ -16,6 +16,11 @@ public class ParsedLogEntry {
     private String path;
     private LogFormat sourceFormat;
     private String rawLine;
+    private String clientIp;
+    private String protocol;
+    private Long responseSize;
+    private String userAgent;
+    private String referrer;
 
     public ParsedLogEntry() {
     }
@@ -114,5 +119,45 @@ public class ParsedLogEntry {
 
     public void setRawLine(String rawLine) {
         this.rawLine = rawLine;
+    }
+
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
+    }
+
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
+    }
+
+    public Long getResponseSize() {
+        return responseSize;
+    }
+
+    public void setResponseSize(Long responseSize) {
+        this.responseSize = responseSize;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
+    public String getReferrer() {
+        return referrer;
+    }
+
+    public void setReferrer(String referrer) {
+        this.referrer = referrer;
     }
 }

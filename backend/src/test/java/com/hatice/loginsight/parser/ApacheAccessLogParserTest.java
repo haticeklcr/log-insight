@@ -41,5 +41,9 @@ class ApacheAccessLogParserTest {
         assertEquals("/api/payment", entry.getPath());
         assertEquals(500, entry.getStatusCode());
         assertEquals("ERROR", entry.getLevel());
+        assertEquals("203.0.113.7", entry.getClientIp());
+        assertEquals(128L, entry.getResponseSize());
+        assertEquals("https://example.com/checkout", entry.getReferrer());
+        assertEquals("Mozilla/5.0", entry.getUserAgent());
     }
 }
