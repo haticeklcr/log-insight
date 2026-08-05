@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 023-add-upload-session-indexes
+      author: hatice
+      changes:
+        - createIndex:
+            tableName: upload_session
+            indexName: idx_upload_session_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: upload_session
+            indexName: idx_upload_session_expires_at
+            columns:
+              - column:
+                  name: expires_at
+      rollback:
+        - dropIndex:
+            tableName: upload_session
+            indexName: idx_upload_session_status
+        - dropIndex:
+            tableName: upload_session
+            indexName: idx_upload_session_expires_at

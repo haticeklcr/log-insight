@@ -58,6 +58,9 @@ public class AnalysisJobEntity {
     @Column(name = "analysis_id")
     private Long analysisId;
 
+    @Column(name = "upload_session_id")
+    private UUID uploadSessionId;
+
     @Column(name = "cancel_requested", nullable = false)
     private boolean cancelRequested;
 
@@ -206,6 +209,14 @@ public class AnalysisJobEntity {
 
     public void setAnalysisId(Long analysisId) {
         this.analysisId = analysisId;
+    }
+
+    public UUID getUploadSessionId() {
+        return uploadSessionId;
+    }
+
+    public void setUploadSessionId(UUID uploadSessionId) {
+        this.uploadSessionId = uploadSessionId;
     }
 
     public boolean isCancelRequested() {

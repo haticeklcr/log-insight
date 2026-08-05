@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: 024-add-upload-session-relation-to-analysis-job
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: upload_session_id
+                  type: UUID
+        - addUniqueConstraint:
+            tableName: analysis_job
+            columnNames: upload_session_id
+            constraintName: uk_analysis_job_upload_session
+        - addForeignKeyConstraint:
+            baseTableName: analysis_job
+            baseColumnNames: upload_session_id
+            referencedTableName: upload_session
+            referencedColumnNames: id
+            constraintName: fk_analysis_job_upload_session
+            onDelete: SET NULL
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: analysis_job
+            constraintName: fk_analysis_job_upload_session
+        - dropUniqueConstraint:
+            tableName: analysis_job
+            constraintName: uk_analysis_job_upload_session
+        - dropColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: upload_session_id
