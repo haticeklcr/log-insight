@@ -86,7 +86,6 @@ export default function App() {
 
   function handleViewResultFromJob(analysisId: number) {
     setActiveJobId(null);
-    setView("history");
     setDetailId(analysisId);
   }
 
@@ -95,37 +94,41 @@ export default function App() {
       <Header />
       <NavigationTabs activeView={view} onChange={handleChangeView} />
       <main className={styles.main}>
-        {view === "new" && <NewAnalysisFlow onJobCreated={handleJobCreated} />}
-
-        {view === "jobs" && activeJobId === null && <JobsListView onViewDetail={setActiveJobId} />}
-
-        {view === "jobs" && activeJobId !== null && (
-          <>
-            {!activeJob && !pollingErrorMessage && <LoadingIndicator />}
-            {pollingErrorMessage && !activeJob && <ErrorAlert message={pollingErrorMessage} />}
-            {activeJob && (
-              <>
-                {jobActionError && <ErrorAlert message={jobActionError} />}
-                <JobDetailView
-                  job={activeJob}
-                  pollingErrorMessage={pollingErrorMessage}
-                  onCancel={handleCancelJob}
-                  onRetry={handleRetryJob}
-                  onViewResult={handleViewResultFromJob}
-                  onBack={() => setActiveJobId(null)}
-                />
-              </>
-            )}
-          </>
-        )}
-
-        {view === "history" && detailId === null && <HistoryView onViewDetail={setDetailId} />}
-
-        {view === "history" && detailId !== null && (
+        {detailId !== null ? (
           <>
             {isDetailLoading && <LoadingIndicator />}
             {detailError && <ErrorAlert message={detailError} />}
             {detail && <AnalysisDetailView detail={detail} onBack={() => setDetailId(null)} />}
+          </>
+        ) : (
+          <>
+            {view === "new" && <NewAnalysisFlow onJobCreated={handleJobCreated} />}
+
+            {view === "jobs" && activeJobId === null && (
+              <JobsListView onViewDetail={setActiveJobId} onViewResult={setDetailId} />
+            )}
+
+            {view === "jobs" && activeJobId !== null && (
+              <>
+                {!activeJob && !pollingErrorMessage && <LoadingIndicator />}
+                {pollingErrorMessage && !activeJob && <ErrorAlert message={pollingErrorMessage} />}
+                {activeJob && (
+                  <>
+                    {jobActionError && <ErrorAlert message={jobActionError} />}
+                    <JobDetailView
+                      job={activeJob}
+                      pollingErrorMessage={pollingErrorMessage}
+                      onCancel={handleCancelJob}
+                      onRetry={handleRetryJob}
+                      onViewResult={handleViewResultFromJob}
+                      onBack={() => setActiveJobId(null)}
+                    />
+                  </>
+                )}
+              </>
+            )}
+
+            {view === "history" && <HistoryView onViewDetail={setDetailId} />}
           </>
         )}
       </main>

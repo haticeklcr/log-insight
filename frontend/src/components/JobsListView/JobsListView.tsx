@@ -12,11 +12,12 @@ import type { PagedResponse } from "../../types/analysisHistory";
 
 interface JobsListViewProps {
   onViewDetail: (jobId: string) => void;
+  onViewResult: (analysisId: number) => void;
 }
 
 const PAGE_SIZE = 10;
 
-export default function JobsListView({ onViewDetail }: JobsListViewProps) {
+export default function JobsListView({ onViewDetail, onViewResult }: JobsListViewProps) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
 
@@ -94,6 +95,7 @@ export default function JobsListView({ onViewDetail }: JobsListViewProps) {
           <JobsTable
             jobs={data.content}
             onViewDetail={onViewDetail}
+            onViewResult={onViewResult}
             onCancel={handleCancel}
             onRetry={handleRetry}
             analysisNameFilter={draftAnalysisName}

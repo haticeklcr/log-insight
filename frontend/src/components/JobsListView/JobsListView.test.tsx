@@ -50,18 +50,20 @@ function samplePage(overrides = {}, jobOverrides = {}) {
 
 describe("JobsListView", () => {
   const onViewDetail = vi.fn();
+  const onViewResult = vi.fn();
 
   beforeEach(() => {
     mockedApi.fetchAnalysisJobs.mockReset();
     mockedApi.cancelAnalysisJob.mockReset();
     mockedApi.retryAnalysisJob.mockReset();
     onViewDetail.mockReset();
+    onViewResult.mockReset();
   });
 
   it("iş listesini yükler, analiz adını ve PENDING durumunu gösterir", async () => {
     mockedApi.fetchAnalysisJobs.mockResolvedValue(samplePage());
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() => expect(screen.getByText("Test Analizi")).toBeInTheDocument());
     expect(screen.getByText("Bekliyor", { selector: "span" })).toBeInTheDocument();
@@ -70,7 +72,7 @@ describe("JobsListView", () => {
   it("PENDING iş için İptal aktif, Retry ve Sonuç pasif olur", async () => {
     mockedApi.fetchAnalysisJobs.mockResolvedValue(samplePage());
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() => expect(screen.getByText("Test Analizi")).toBeInTheDocument());
 
@@ -82,7 +84,7 @@ describe("JobsListView", () => {
   it("FAILED iş için yalnızca Retry aktif olur", async () => {
     mockedApi.fetchAnalysisJobs.mockResolvedValue(samplePage({}, { status: "FAILED" }));
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() => expect(screen.getByText("Test Analizi")).toBeInTheDocument());
 
@@ -94,7 +96,7 @@ describe("JobsListView", () => {
   it("SUCCEEDED iş için yalnızca Sonuç aktif olur", async () => {
     mockedApi.fetchAnalysisJobs.mockResolvedValue(samplePage({}, { status: "SUCCEEDED", progress: 100 }));
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() => expect(screen.getByText("Test Analizi")).toBeInTheDocument());
 
@@ -106,7 +108,7 @@ describe("JobsListView", () => {
   it("backend erişilemediğinde hata mesajı gösterir", async () => {
     mockedApi.fetchAnalysisJobs.mockRejectedValue(new Error("network error"));
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() =>
       expect(
@@ -118,7 +120,7 @@ describe("JobsListView", () => {
   it("Detay butonuna basınca onViewDetail çağrılır", async () => {
     mockedApi.fetchAnalysisJobs.mockResolvedValue(samplePage());
 
-    render(<JobsListView onViewDetail={onViewDetail} />);
+    render(<JobsListView onViewDetail={onViewDetail} onViewResult={onViewResult} />);
 
     await waitFor(() => expect(screen.getByText("Test Analizi")).toBeInTheDocument());
 

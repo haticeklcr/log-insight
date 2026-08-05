@@ -6,6 +6,7 @@ import type { AnalysisJobSummary, JobStatus } from "../../types/analysisJob";
 interface JobsTableProps {
   jobs: AnalysisJobSummary[];
   onViewDetail: (jobId: string) => void;
+  onViewResult: (analysisId: number) => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
   analysisNameFilter: string;
@@ -27,6 +28,7 @@ function formatDateTime(value: string | null, locale: string): string {
 export default function JobsTable({
   jobs,
   onViewDetail,
+  onViewResult,
   onCancel,
   onRetry,
   analysisNameFilter,
@@ -142,7 +144,7 @@ export default function JobsTable({
                 <button
                   type="button"
                   className={styles.actionButton}
-                  onClick={() => onViewDetail(job.jobId)}
+                  onClick={() => job.analysisId !== null && onViewResult(job.analysisId)}
                   disabled={!canViewResult}
                 >
                   {t("jobsTable.result")}
