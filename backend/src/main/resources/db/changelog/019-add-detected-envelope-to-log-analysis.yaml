@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-add-detected-envelope-to-log-analysis
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: detected_envelope
+                  type: VARCHAR(30)
+      rollback:
+        - dropColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: detected_envelope

@@ -10,7 +10,11 @@ import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.entity.LogAnalysisEntity;
 import com.hatice.loginsight.exception.LogFormatCouldNotBeDetectedException;
 import com.hatice.loginsight.exception.UnsupportedFilterForParserException;
+import com.hatice.loginsight.parser.EnvelopeDetector;
+import com.hatice.loginsight.parser.EnvelopeStripResult;
 import com.hatice.loginsight.parser.ExceptionInfoExtractor;
+import com.hatice.loginsight.parser.LogEnvelope;
+import com.hatice.loginsight.parser.LogEnvelopeDetectionResult;
 import com.hatice.loginsight.parser.LogFormat;
 import com.hatice.loginsight.parser.LogFormatDetectionResult;
 import com.hatice.loginsight.parser.LogFormatDetector;
@@ -43,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +63,7 @@ public class AnalysisJobRunner {
     private final TempFileStorageService tempFileStorageService;
     private final LogParserFactory parserFactory;
     private final LogFormatDetector formatDetector;
+    private final EnvelopeDetector envelopeDetector;
     private final SensitiveDataMasker sensitiveDataMasker;
     private final LogMessageNormalizer logMessageNormalizer;
     private final ExceptionInfoExtractor exceptionInfoExtractor;
@@ -81,6 +87,7 @@ public class AnalysisJobRunner {
                               TempFileStorageService tempFileStorageService,
                               LogParserFactory parserFactory,
                               LogFormatDetector formatDetector,
+                              EnvelopeDetector envelopeDetector,
                               SensitiveDataMasker sensitiveDataMasker,
                               LogMessageNormalizer logMessageNormalizer,
                               ExceptionInfoExtractor exceptionInfoExtractor,
@@ -102,6 +109,7 @@ public class AnalysisJobRunner {
         this.tempFileStorageService = tempFileStorageService;
         this.parserFactory = parserFactory;
         this.formatDetector = formatDetector;
+        this.envelopeDetector = envelopeDetector;
         this.sensitiveDataMasker = sensitiveDataMasker;
         this.logMessageNormalizer = logMessageNormalizer;
         this.exceptionInfoExtractor = exceptionInfoExtractor;
@@ -137,6 +145,10 @@ public class AnalysisJobRunner {
         try {
             List<String> sampleLines = formatDetector.collectSampleLines(filePath, formatDetector.getDefaultSampleSize());
 
+            LogEnvelopeDetectionResult envelopeDetectionResult = envelopeDetector.detect(sampleLines);
+            LogEnvelope detectedEnvelope = envelopeDetectionResult.getDetectedEnvelope();
+            List<String> formatDetectionSampleLines = stripSampleLines(sampleLines, detectedEnvelope);
+
             LogFormat requestedFormat = parseRequestedFormat(job.getRequestedParserType());
             LogFormat selectedFormat;
             Integer formatConfidence = null;
@@ -146,7 +158,7 @@ public class AnalysisJobRunner {
             if (requestedFormat == LogFormat.AUTO) {
                 LogFormatDetectionResult detectionResult;
                 try {
-                    detectionResult = formatDetector.detect(sampleLines);
+                    detectionResult = formatDetector.detect(formatDetectionSampleLines);
                 } catch (LogFormatCouldNotBeDetectedException e) {
                     handleFailure(job, "LOG_FORMAT_COULD_NOT_BE_DETECTED", e.getMessage());
                     return;
@@ -157,22 +169,22 @@ public class AnalysisJobRunner {
                 matchedSampleCount = detectionResult.getMatchedSampleCount();
             } else {
                 selectedFormat = requestedFormat;
-                if (!sampleLines.isEmpty()) {
+                if (!formatDetectionSampleLines.isEmpty()) {
                     LogParser candidateParser = parserFactory.getParser(selectedFormat);
                     int matched = 0;
-                    for (String sampleLine : sampleLines) {
+                    for (String sampleLine : formatDetectionSampleLines) {
                         if (candidateParser.canParse(sampleLine)) {
                             matched++;
                         }
                     }
-                    int confidence = (int) Math.round((matched * 100.0) / sampleLines.size());
+                    int confidence = (int) Math.round((matched * 100.0) / formatDetectionSampleLines.size());
                     if (confidence < formatConfidenceThreshold) {
                         handleFailure(job, "SELECTED_PARSER_CANNOT_PARSE_FILE",
                                 "Secilen parser (" + selectedFormat + ") dosya icerigiyle uyumlu degil, guven skoru: " + confidence);
                         return;
                     }
                     formatConfidence = confidence;
-                    sampleSize = sampleLines.size();
+                    sampleSize = formatDetectionSampleLines.size();
                     matchedSampleCount = matched;
                 }
             }
@@ -194,6 +206,7 @@ public class AnalysisJobRunner {
 
             job.setRequestedParserType(requestedFormat.name());
             job.setDetectedLogFormat(selectedFormat.name());
+            job.setDetectedEnvelope(detectedEnvelope.name());
             job = analysisJobRepository.save(job);
 
             JobFilterCriteria filterCriteria = JobFilterCriteria.from(job);
@@ -211,9 +224,15 @@ public class AnalysisJobRunner {
                 while ((line = reader.readLine()) != null) {
                     accumulator.incrementTotalLines();
 
-                    String boundedLine = line.length() > maxLogLineLength ? line.substring(0, maxLogLineLength) : line;
+                    EnvelopeStripResult stripResult = detectedEnvelope == LogEnvelope.NONE
+                            ? null : envelopeDetector.strip(line, detectedEnvelope);
+                    String logicalLine = stripResult != null ? stripResult.getPayload() : line;
+                    Instant envelopeTimestamp = stripResult != null ? stripResult.getEnvelopeTimestamp() : null;
 
-                    Optional<LogRecordGroup> completed = aggregator.offer(boundedLine);
+                    String boundedLine = logicalLine.length() > maxLogLineLength
+                            ? logicalLine.substring(0, maxLogLineLength) : logicalLine;
+
+                    Optional<LogRecordGroup> completed = aggregator.offer(boundedLine, envelopeTimestamp);
                     if (completed.isPresent()) {
                         processGroup(completed.get(), selectedParser, accumulator, timelineAggregator, filterCriteria);
                     }
@@ -254,7 +273,7 @@ public class AnalysisJobRunner {
                 }
             }
 
-            handleSuccess(job, accumulator, timelineAggregator, selectedFormat, formatConfidence, sampleSize, matchedSampleCount);
+            handleSuccess(job, accumulator, timelineAggregator, selectedFormat, detectedEnvelope, formatConfidence, sampleSize, matchedSampleCount);
 
         } catch (IOException e) {
             handleFailure(job, "ANALYSIS_IO_ERROR", "Log dosyasi okunurken bir hata olustu: " + e.getMessage());
@@ -274,12 +293,35 @@ public class AnalysisJobRunner {
         return value != null && !value.isBlank();
     }
 
+    private List<String> stripSampleLines(List<String> sampleLines, LogEnvelope detectedEnvelope) {
+        if (detectedEnvelope == LogEnvelope.NONE) {
+            return sampleLines;
+        }
+        List<String> stripped = new ArrayList<>(sampleLines.size());
+        for (String sampleLine : sampleLines) {
+            stripped.add(applyEnvelopeStripping(sampleLine, detectedEnvelope));
+        }
+        return stripped;
+    }
+
+    private String applyEnvelopeStripping(String rawLine, LogEnvelope detectedEnvelope) {
+        if (detectedEnvelope == LogEnvelope.NONE) {
+            return rawLine;
+        }
+        EnvelopeStripResult stripResult = envelopeDetector.strip(rawLine, detectedEnvelope);
+        return stripResult != null ? stripResult.getPayload() : rawLine;
+    }
+
     private void processGroup(LogRecordGroup group, LogParser parser, AnalysisResultAccumulator accumulator,
                                LogTimelineAggregator timelineAggregator, JobFilterCriteria filterCriteria) {
         ParsedLogEntry entry = parser.parse(group.getHeaderLine());
         if (entry == null) {
             accumulator.recordUnparsedLine();
             return;
+        }
+
+        if (entry.getTimestamp() == null && group.getEnvelopeTimestamp() != null) {
+            entry.setTimestamp(group.getEnvelopeTimestamp());
         }
 
         if (!filterCriteria.matches(entry)) {
@@ -297,7 +339,8 @@ public class AnalysisJobRunner {
 
     private void handleSuccess(AnalysisJobEntity job, AnalysisResultAccumulator accumulator,
                                 LogTimelineAggregator timelineAggregator, LogFormat detectedFormat,
-                                Integer formatConfidence, Integer sampleSize, Integer matchedSampleCount) {
+                                LogEnvelope detectedEnvelope, Integer formatConfidence, Integer sampleSize,
+                                Integer matchedSampleCount) {
         LogAnalysisEntity entity = new LogAnalysisEntity();
         entity.setFileName(job.getFileName());
         entity.setFileSize(job.getFileSize());
@@ -312,6 +355,7 @@ public class AnalysisJobRunner {
 
         entity.setRequestedParserType(job.getRequestedParserType());
         entity.setDetectedLogFormat(detectedFormat.name());
+        entity.setDetectedEnvelope(detectedEnvelope.name());
         entity.setParsedEntryCount(accumulator.getParsedEntryCount());
         entity.setUnparsedLineCount(accumulator.getUnparsedLineCount());
         entity.setFirstLogTimestamp(accumulator.getFirstLogTimestamp());

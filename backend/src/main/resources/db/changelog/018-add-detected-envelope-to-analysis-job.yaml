@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 018-add-detected-envelope-to-analysis-job
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: detected_envelope
+                  type: VARCHAR(30)
+      rollback:
+        - dropColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: detected_envelope

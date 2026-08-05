@@ -67,6 +67,9 @@ public class AnalysisJobEntity {
     @Column(name = "detected_log_format", length = 30)
     private String detectedLogFormat;
 
+    @Column(name = "detected_envelope", length = 30)
+    private String detectedEnvelope;
+
     @Column(name = "filter_start_time")
     private Instant filterStartTime;
 
@@ -235,6 +238,14 @@ public class AnalysisJobEntity {
 
     public void setDetectedLogFormat(String detectedLogFormat) {
         this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public String getDetectedEnvelope() {
+        return detectedEnvelope;
+    }
+
+    public void setDetectedEnvelope(String detectedEnvelope) {
+        this.detectedEnvelope = detectedEnvelope;
     }
 
     public Instant getFilterStartTime() {

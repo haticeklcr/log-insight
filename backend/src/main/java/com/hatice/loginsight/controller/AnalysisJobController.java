@@ -93,6 +93,7 @@ public class AnalysisJobController {
         dto.setAnalysisId(job.getAnalysisId());
         dto.setRequestedParserType(job.getRequestedParserType());
         dto.setDetectedLogFormat(job.getDetectedLogFormat());
+        dto.setDetectedEnvelope(job.getDetectedEnvelope());
         dto.setAppliedFilters(AppliedFiltersDto.from(job));
         return dto;
     }

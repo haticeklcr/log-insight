@@ -154,6 +154,7 @@ public class AnalysisHistoryService {
 
         dto.setRequestedParserType(entity.getRequestedParserType());
         dto.setDetectedLogFormat(entity.getDetectedLogFormat());
+        dto.setDetectedEnvelope(entity.getDetectedEnvelope());
         dto.setParsedEntryCount(entity.getParsedEntryCount());
         dto.setUnparsedLineCount(entity.getUnparsedLineCount());
         dto.setUnparsedLinePercentage(computeUnparsedLinePercentage(entity));

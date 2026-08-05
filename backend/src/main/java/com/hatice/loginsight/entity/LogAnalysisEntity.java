@@ -57,6 +57,9 @@ public class LogAnalysisEntity {
     @Column(name = "detected_log_format", length = 30)
     private String detectedLogFormat;
 
+    @Column(name = "detected_envelope", length = 30)
+    private String detectedEnvelope;
+
     @Column(name = "parsed_entry_count")
     private Integer parsedEntryCount;
 
@@ -205,6 +208,14 @@ public class LogAnalysisEntity {
 
     public void setDetectedLogFormat(String detectedLogFormat) {
         this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public String getDetectedEnvelope() {
+        return detectedEnvelope;
+    }
+
+    public void setDetectedEnvelope(String detectedEnvelope) {
+        this.detectedEnvelope = detectedEnvelope;
     }
 
     public Integer getParsedEntryCount() {

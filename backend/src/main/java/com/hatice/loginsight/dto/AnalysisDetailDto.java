@@ -20,6 +20,7 @@ public class AnalysisDetailDto {
 
     private String requestedParserType;
     private String detectedLogFormat;
+    private String detectedEnvelope;
     private Integer parsedEntryCount;
     private Integer unparsedLineCount;
     private Double unparsedLinePercentage;
@@ -150,6 +151,14 @@ public class AnalysisDetailDto {
 
     public void setDetectedLogFormat(String detectedLogFormat) {
         this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public String getDetectedEnvelope() {
+        return detectedEnvelope;
+    }
+
+    public void setDetectedEnvelope(String detectedEnvelope) {
+        this.detectedEnvelope = detectedEnvelope;
     }
 
     public Integer getParsedEntryCount() {

@@ -21,6 +21,7 @@ public class AnalysisJobDetailDto {
     private Long analysisId;
     private String requestedParserType;
     private String detectedLogFormat;
+    private String detectedEnvelope;
     private AppliedFiltersDto appliedFilters;
 
     public AnalysisJobDetailDto() {
@@ -136,6 +137,14 @@ public class AnalysisJobDetailDto {
 
     public void setDetectedLogFormat(String detectedLogFormat) {
         this.detectedLogFormat = detectedLogFormat;
+    }
+
+    public String getDetectedEnvelope() {
+        return detectedEnvelope;
+    }
+
+    public void setDetectedEnvelope(String detectedEnvelope) {
+        this.detectedEnvelope = detectedEnvelope;
     }
 
     public AppliedFiltersDto getAppliedFilters() {
