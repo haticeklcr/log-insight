@@ -205,17 +205,16 @@ public class AnalysisResultAccumulator {
     }
 
     public int computeParseQualityScore() {
-        if (parsedEntryCount + unparsedLineCount == 0) {
+        int totalRecords = parsedEntryCount + unparsedLineCount;
+        if (totalRecords == 0) {
             return 0;
         }
-        int totalRecords = parsedEntryCount + unparsedLineCount;
         double parsedRatio = (double) parsedEntryCount / totalRecords;
-        double unparsedRatio = 1.0 - ((double) unparsedLineCount / totalRecords);
         double timestampRatio = parsedEntryCount == 0 ? 0 : (double) timestampPresentCount / parsedEntryCount;
         double levelRatio = parsedEntryCount == 0 ? 0 : (double) levelPresentCount / parsedEntryCount;
         double messageRatio = parsedEntryCount == 0 ? 0 : (double) messagePresentCount / parsedEntryCount;
 
-        double average = (parsedRatio + unparsedRatio + timestampRatio + levelRatio + messageRatio) / 5.0;
+        double average = (parsedRatio + timestampRatio + levelRatio + messageRatio) / 4.0;
         return (int) Math.round(average * 100);
     }
 }
