@@ -10,6 +10,8 @@ import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.entity.LogAnalysisEntity;
 import com.hatice.loginsight.exception.LogFormatCouldNotBeDetectedException;
 import com.hatice.loginsight.exception.UnsupportedFilterForParserException;
+import com.hatice.loginsight.parser.AssembledCriRecord;
+import com.hatice.loginsight.parser.CriPartialRecordAssembler;
 import com.hatice.loginsight.parser.EnvelopeDetector;
 import com.hatice.loginsight.parser.EnvelopeStripResult;
 import com.hatice.loginsight.parser.ExceptionInfoExtractor;
@@ -215,6 +217,8 @@ public class AnalysisJobRunner {
             AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(maxDistinctLoggers, maxDistinctErrorGroups);
             LogTimelineAggregator timelineAggregator = new LogTimelineAggregator(maxTimelineBuckets);
             MultilineExceptionAggregator aggregator = new MultilineExceptionAggregator(selectedParser, maxStackTraceLines);
+            CriPartialRecordAssembler criAssembler = detectedEnvelope == LogEnvelope.CONTAINER_CRI
+                    ? new CriPartialRecordAssembler(maxLogLineLength) : null;
 
             try (CountingInputStream countingStream = new CountingInputStream(Files.newInputStream(filePath));
                  BufferedReader reader = new BufferedReader(
@@ -226,16 +230,9 @@ public class AnalysisJobRunner {
 
                     EnvelopeStripResult stripResult = detectedEnvelope == LogEnvelope.NONE
                             ? null : envelopeDetector.strip(line, detectedEnvelope);
-                    String logicalLine = stripResult != null ? stripResult.getPayload() : line;
-                    Instant envelopeTimestamp = stripResult != null ? stripResult.getEnvelopeTimestamp() : null;
 
-                    String boundedLine = logicalLine.length() > maxLogLineLength
-                            ? logicalLine.substring(0, maxLogLineLength) : logicalLine;
-
-                    Optional<LogRecordGroup> completed = aggregator.offer(boundedLine, envelopeTimestamp);
-                    if (completed.isPresent()) {
-                        processGroup(completed.get(), selectedParser, accumulator, timelineAggregator, filterCriteria);
-                    }
+                    consumeLine(line, stripResult, criAssembler, aggregator, selectedParser,
+                            accumulator, timelineAggregator, filterCriteria);
 
                     if (accumulator.getTotalLines() % progressInterval == 0) {
                         boolean checkpointSaved = false;
@@ -260,6 +257,11 @@ public class AnalysisJobRunner {
                     }
                 }
 
+                if (criAssembler != null) {
+                    for (AssembledCriRecord record : criAssembler.flush()) {
+                        consumeAssembledCriRecord(record, aggregator, selectedParser, accumulator, timelineAggregator, filterCriteria);
+                    }
+                }
                 aggregator.flush().ifPresent(group -> processGroup(group, selectedParser, accumulator, timelineAggregator, filterCriteria));
             }
 
@@ -310,6 +312,42 @@ public class AnalysisJobRunner {
         }
         EnvelopeStripResult stripResult = envelopeDetector.strip(rawLine, detectedEnvelope);
         return stripResult != null ? stripResult.getPayload() : rawLine;
+    }
+
+    private void consumeLine(String rawLine, EnvelopeStripResult stripResult, CriPartialRecordAssembler criAssembler,
+                              MultilineExceptionAggregator aggregator, LogParser selectedParser,
+                              AnalysisResultAccumulator accumulator, LogTimelineAggregator timelineAggregator,
+                              JobFilterCriteria filterCriteria) {
+        if (criAssembler != null) {
+            String stream = stripResult != null ? stripResult.getCriStream() : null;
+            String partialTag = stripResult != null ? stripResult.getCriPartialTag() : null;
+            String payload = stripResult != null ? stripResult.getPayload() : rawLine;
+            Instant fragmentTimestamp = stripResult != null ? stripResult.getEnvelopeTimestamp() : null;
+
+            for (AssembledCriRecord record : criAssembler.offer(stream, partialTag, payload, fragmentTimestamp)) {
+                consumeAssembledCriRecord(record, aggregator, selectedParser, accumulator, timelineAggregator, filterCriteria);
+            }
+            return;
+        }
+
+        String logicalLine = stripResult != null ? stripResult.getPayload() : rawLine;
+        Instant envelopeTimestamp = stripResult != null ? stripResult.getEnvelopeTimestamp() : null;
+        String boundedLine = logicalLine.length() > maxLogLineLength
+                ? logicalLine.substring(0, maxLogLineLength) : logicalLine;
+
+        aggregator.offer(boundedLine, envelopeTimestamp)
+                .ifPresent(group -> processGroup(group, selectedParser, accumulator, timelineAggregator, filterCriteria));
+    }
+
+    private void consumeAssembledCriRecord(AssembledCriRecord record, MultilineExceptionAggregator aggregator,
+                                            LogParser selectedParser, AnalysisResultAccumulator accumulator,
+                                            LogTimelineAggregator timelineAggregator, JobFilterCriteria filterCriteria) {
+        if (record.isIncomplete()) {
+            accumulator.recordUnparsedLine();
+            return;
+        }
+        aggregator.offer(record.getPayload(), record.getTimestamp())
+                .ifPresent(group -> processGroup(group, selectedParser, accumulator, timelineAggregator, filterCriteria));
     }
 
     private void processGroup(LogRecordGroup group, LogParser parser, AnalysisResultAccumulator accumulator,
