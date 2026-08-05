@@ -1,0 +1,21 @@
+Jul 21 11:17:07 DESKTOP-J6RDSJB systemd[1]: Stopping User Login Management...
+Jul 21 11:17:07 DESKTOP-J6RDSJB systemd[1]: Stopping User Manager for UID 0...
+Jul 21 11:17:07 DESKTOP-J6RDSJB systemd-logind[435]: Removed session 1.
+Jul 21 11:17:07 DESKTOP-J6RDSJB systemd[1]: apport.service: Deactivated successfully.
+Jul 21 11:17:07 DESKTOP-J6RDSJB systemd[1]: Stopped LSB: automatic crash report generation.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: systemd-logind.service: Deactivated successfully.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Stopped User Login Management.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[656]: Removed slice User Core Session Slice.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[656]: Stopped target Main User Target.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: user@0.service: Deactivated successfully.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Stopped User Manager for UID 0.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Unmounting /init...
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Unmounting /mnt/c...
+Jul 21 11:17:08 DESKTOP-J6RDSJB umount[784]: umount: /init: target is busy.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Unmounting /mnt/d...
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: init.mount: Mount process exited, code=exited, status=32/n/a
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Failed unmounting /init.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: mnt-c.mount: Deactivated successfully.
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd[1]: Unmounted /mnt/c.
+Jul 21 11:17:08 DESKTOP-J6RDSJB kernel: hv_balloon: Max. dynamic memory size: 8112 MB
+Jul 21 11:17:08 DESKTOP-J6RDSJB systemd-journald[72]: Journal stopped
