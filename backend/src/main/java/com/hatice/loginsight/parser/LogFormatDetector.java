@@ -1,6 +1,7 @@
 package com.hatice.loginsight.parser;
 
 import com.hatice.loginsight.exception.LogFormatCouldNotBeDetectedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 @Service
 public class LogFormatDetector {
@@ -18,24 +20,45 @@ public class LogFormatDetector {
     private final LogParserFactory parserFactory;
     private final int defaultSampleSize;
     private final int confidenceThreshold;
+    private final int maxScannedLines;
 
+    public LogFormatDetector(LogParserFactory parserFactory, int defaultSampleSize, int confidenceThreshold) {
+        this(parserFactory, defaultSampleSize, confidenceThreshold, 2000);
+    }
+
+    @Autowired
     public LogFormatDetector(LogParserFactory parserFactory,
                               @Value("${app.log-format-detection.sample-size}") int defaultSampleSize,
-                              @Value("${app.log-format-detection.confidence-threshold}") int confidenceThreshold) {
+                              @Value("${app.log-format-detection.confidence-threshold}") int confidenceThreshold,
+                              @Value("${app.log-format-detection.max-scanned-lines}") int maxScannedLines) {
         this.parserFactory = parserFactory;
         this.defaultSampleSize = defaultSampleSize;
         this.confidenceThreshold = confidenceThreshold;
+        this.maxScannedLines = maxScannedLines;
     }
 
     
     public List<String> collectSampleLines(Path filePath, int maxSamples) throws IOException {
+        return collectSampleLines(filePath, maxSamples, UnaryOperator.identity());
+    }
+
+    public List<String> collectSampleLines(Path filePath, int maxSamples, UnaryOperator<String> lineTransform)
+            throws IOException {
         List<String> samples = new ArrayList<>();
         try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
-            String line;
-            while (samples.size() < maxSamples && (line = reader.readLine()) != null) {
-                if (!line.isBlank()) {
-                    samples.add(line);
+            String rawLine;
+            int scanned = 0;
+            while (samples.size() < maxSamples && scanned < maxScannedLines
+                    && (rawLine = reader.readLine()) != null) {
+                scanned++;
+                String transformed = lineTransform.apply(rawLine);
+                if (transformed.isBlank()) {
+                    continue;
                 }
+                if (ContinuationLineDetector.isContinuationLine(transformed)) {
+                    continue;
+                }
+                samples.add(transformed);
             }
         }
         return samples;
