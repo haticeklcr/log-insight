@@ -1,7 +1,7 @@
 # Log Analiz Uygulaması (log-insight)
 
 ## Amaç
-Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir. V4 ile birlikte log analizi artık arka planda çalışan asenkron bir **job** olarak yürütülür; kullanıcı her analize bir ad verir, job'ın durumunu (bekliyor/çalışıyor/tamamlandı/başarısız/iptal edildi) canlı olarak izleyebilir, iptal edebilir ya da başarısız olanları tekrar deneyebilir. V5 ile birlikte uygulama artık tek tip düz metin log dosyasıyla sınırlı değil — Spring Boot, JSON, Nginx access log, Apache access log ve genel düz metin olmak üzere 5 farklı log formatını otomatik algılayabiliyor veya kullanıcı manuel olarak seçebiliyor; hata mesajlarını normalize ederek gruplayabiliyor, log zaman çizelgesi çıkarabiliyor, hassas verileri maskeleyebiliyor ve gelişmiş filtrelerle (tarih aralığı, level, logger, thread, HTTP alanları) analiz kapsamını daraltabiliyor. Uygulama Türkçe ve İngilizce dillerini destekler.
+Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını analiz eden bir REST API ve bu API'yi kullanan bir web arayüzü. Log seviyelerini (INFO/WARN/ERROR), exception içeren satırları ve tekrar eden hata mesajlarını tespit ederek sonucu hem JSON olarak hem de görsel bir arayüzde sunar. V3 ile birlikte her başarılı analiz PostgreSQL'de kalıcı olarak saklanır; geçmiş analizler listelenebilir, aranabilir, filtrelenebilir, detayları görüntülenebilir ve silinebilir. V4 ile birlikte log analizi artık arka planda çalışan asenkron bir **job** olarak yürütülür; kullanıcı her analize bir ad verir, job'ın durumunu (bekliyor/çalışıyor/tamamlandı/başarısız/iptal edildi) canlı olarak izleyebilir, iptal edebilir ya da başarısız olanları tekrar deneyebilir. V5 ile birlikte uygulama artık tek tip düz metin log dosyasıyla sınırlı değil — Spring Boot, JSON, Nginx access log, Apache access log ve genel düz metin olmak üzere 5 farklı log formatını otomatik algılayabiliyor veya kullanıcı manuel olarak seçebiliyor; hata mesajlarını normalize ederek gruplayabiliyor, log zaman çizelgesi çıkarabiliyor, hassas verileri maskeleyebiliyor ve gelişmiş filtrelerle (tarih aralığı, level, logger, thread, HTTP alanları) analiz kapsamını daraltabiliyor. Uygulama Türkçe ve İngilizce dillerini destekler. V6.1 ile birlikte uygulama, üretim ortamından toplanmış (systemd/journald, Docker/Kubernetes CRI gibi bir toplayıcı öneki taşıyan) log dosyalarını da doğru analiz edebiliyor; envelope tespiti, CRI bölünmüş kayıt birleştirme, format güven skoru hesabındaki bir hatanın düzeltilmesi, kademeli zaman çizelgesi ve gigabayt ölçekli dosyalara hazır 64 bit sayaçlarla.
 
 ## V5 ile Eklenen Özellikler
 - **Çoklu log formatı desteği** — Spring Boot standart log formatı, JSON log formatı, Nginx access log, Apache access log ve genel düz metin log; her biri ayrı bir `LogParser` implementasyonu (`SpringBootLogParser`, `JsonLogParser`, `NginxAccessLogParser`, `ApacheAccessLogParser`, `PlainTextLogParser`)
@@ -17,6 +17,17 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 - **5 yeni Liquibase migration'ı, 5 yeni istatistik tablosu**
 - **Genişletilmiş parser mimarisi** — `LogParser` interface'i + Strategy/Factory Pattern ile yeni format eklemek mevcut kodda değişiklik gerektirmiyor
 - **80+ yeni backend testi, 30+ yeni frontend testi**, tümü V1-V4 testleriyle birlikte yeşil
+
+## V6.1 ile Eklenen Özellikler
+- **Log envelope tespiti ve soyulması** — SYSLOG_RFC3164, SYSLOG_RFC5424 ve CONTAINER_CRI (Docker/Kubernetes) toplayıcı önekleri tespit edilip analiz zincirinin en başında soyuluyor; güven eşiğinin altında kalan dosyalarda soyma hiç uygulanmıyor, mevcut parser'lar hiç etkilenmiyor
+- **CRI bölünmüş (partial) kayıt birleştirme** — ayrı bir bileşen (`CriPartialRecordAssembler`) ardışık `P` parçalarını sonraki `F` ile tek mantıksal kayda birleştiriyor; stdout/stderr karışmıyor, eksik/limit aşan kayıtlar sessizce yutulmuyor
+- **Format güven skoru düzeltmesi** — devam satırları (stack trace) artık paydaya dahil edilmiyor; stack trace ağırlıklı dosyalarda doğru parser yanlışlıkla reddedilmiyor
+- **Exception ve parse edilemeyen satır sayımı düzeltmesi** — multiline gruplamadaki, parse edilemeyen her satırı önceki kayda yutan bir hatanın giderilmesi; parse kalite skorunun artık gerçek durumu yansıtması
+- **Kademeli zaman çizelgesi** — dakika → 5 dakika → 15 dakika → saat → 6 saat → gün → hafta kademeleri arasında, bucket sayısı sınırı aşıldıkça gerektiği kadar tekrar tekrar yükseltiliyor
+- **Transactional, toplu analiz sonucu kaydetme** — analiz kaydı + tüm istatistikler tek bir veritabanı transaction'ında, `saveAll` ile toplu yazılıyor; yarım kalan analiz kaydı oluşmuyor
+- **64 bit sayaçlar** — tüm satır/kayıt sayaçları `BIGINT`/`long`'a genişletildi, gigabayt ölçekli dosyalarda 32 bit taşma riski ortadan kalktı
+- **4 yeni Liquibase migration'ı (018-021)**
+- **34 yeni backend testi**, tümü V1-V5 testleriyle birlikte yeşil
 
 ## V4 ile Eklenen Özellikler
 - Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)
@@ -340,7 +351,11 @@ backend/src/main/resources/db/changelog/
 ├── 014-add-parse-quality-fields.yaml # parse_quality_score / format_confidence vb. (V5)
 ├── 015-add-parser-and-filter-fields-to-analysis-job.yaml # analysis_job'a parser/filtre alanları (V5)
 ├── 016-add-normalized-message-to-frequent-error.yaml # frequent_error.normalized_message (V5)
-└── 017-add-indexes-to-stat-tables.yaml # yeni istatistik tablolarına index (V5)
+├── 017-add-indexes-to-stat-tables.yaml # yeni istatistik tablolarına index (V5)
+├── 018-add-detected-envelope-to-analysis-job.yaml # analysis_job.detected_envelope (V6.1)
+├── 019-add-detected-envelope-to-log-analysis.yaml # log_analysis.detected_envelope (V6.1)
+├── 020-add-timeline-granularity-to-log-analysis.yaml # log_analysis.timeline_granularity (V6.1)
+└── 021-widen-analysis-counters-to-bigint.yaml # tüm sayaç kolonlarını BIGINT'e genişletir (V6.1)
 ```
 
 Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
@@ -457,6 +472,9 @@ Backend, `application.properties`'teki şu varsayılanlarla `localhost:5432`'ye 
 | `MAX_DISTINCT_ERROR_GROUPS` | Backend | `500` | (V5) Normalize edilmiş hata gruplarının maksimum sayısı. |
 | `MAX_TIMELINE_BUCKETS` | Backend | `500` | (V5) Bu sayı aşılırsa dakikalık bucket'lar otomatik olarak saatliğe birleştirilir. |
 | `MAX_UNPARSED_LINE_PERCENTAGE` | Backend | `50` | (V5) Parse edilemeyen satır oranı bu yüzdeyi aşarsa job `TOO_MANY_UNPARSED_LINES` ile `FAILED` olur. |
+| `ENVELOPE_DETECTION_ENABLED` | Backend | `true` | (V6.1) Envelope (toplayıcı öneki) tespitinin açık/kapalı olması. |
+| `ENVELOPE_DETECTION_CONFIDENCE_THRESHOLD` | Backend | `80` | (V6.1) Bu değerin altında kalan envelope tespiti uygulanmaz, dosya değiştirilmeden işlenir. |
+| `LOG_FORMAT_DETECTION_MAX_SAMPLE_SIZE` | Backend | `2000` | (V6.1) Format örneklemesi için (devam satırı olmayan yeterli satır bulana kadar) taranacak maksimum ham satır sayısı. |
 
 `.env.example` dosyası (proje kökünde), gerçek değerler olmadan hangi değişkenlerin gerektiğini gösterir; gerçek `.env` dosyası `.gitignore` ile git'e dahil edilmez.
 
@@ -676,6 +694,18 @@ V5 ile eklenen test senaryoları (80 yeni birim testi + 5 entegrasyon testi, 14 
 
 Her parser için ayrı bir fixture dosyası `backend/src/test/resources/fixtures/` altında bulunur (bkz. [Parser Testlerinin Çalıştırılması](#parser-testlerinin-çalıştırılması)).
 
+V6.1 ile eklenen test senaryoları (34 yeni test):
+- 3 envelope biçiminin (RFC3164, RFC5424, CRI) tespiti, güven skoru, `strip()` ile doğru ayrıştırılması, eşik altı karışık dosyada soyma yapılmaması, `ENVELOPE_DETECTION_ENABLED=false` ile kapatılabilirlik
+- CRI ardışık P parçalarının F ile birleştirilmesi, stdout/stderr karışmaması, beklenmeyen stream'de grup sonlandırma, eksik/limit aşan kayıtların sessizce yutulmaması, dış zaman damgasının ilk P parçasından alınması
+- Format güven skoru hesabının devam satırlarını dışlaması, `LOG_FORMAT_DETECTION_MAX_SAMPLE_SIZE` üst sınırının çalışması, stack-trace ağırlıklı bir dosyada doğru parser'ın reddedilmemesi
+- Exception sınıf adının mesajın ortasında tespiti
+- Zaman çizelgesinin birden fazla kademe üst üste yükselmesi
+- journald/CRI önekli dosyaların uçtan uca doğru analiz edilmesi (gerçek job akışı üzerinden): envelope+format tespiti, multiline exception'ın tek kayıt sayılması, dış zaman damgası fallback'i, timeline oluşumu, gerçekten parse edilemeyen satırların sayılması
+- Analiz sonucunun (kayıt + istatistikler) tek transaction'da kaydedilmesi ve bir istatistik hata verdiğinde TÜMÜNÜN rollback edilmesi
+- `Integer.MAX_VALUE`'yu aşan bir sayacın doğru saklanıp okunması
+
+Envelope biçimlerinin her biri için ayrı bir fixture dosyası bulunur; `envelope-real-world-sample.log`, elle yazılmamış, gerçek bir sistemden (`journalctl -o short`, WSL sistem journal'ı) alınmış çıktıdır — hassas veri içermediği için maskeleme gerekmedi.
+
 ### Testcontainers Testlerinin Çalıştırılması
 
 Veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker container'ında (Testcontainers ile) başlatarak çalışır — mock veya in-memory veritabanı kullanılmaz. Container, `AbstractIntegrationTest`'te "singleton container" deseniyle (JVM başına bir kez, elle) başlatılır ve tüm test sınıfları arasında paylaşılır. Bunun için Docker Desktop (ya da WSL2 üzerinde Docker) çalışır durumda olmalı; başka hiçbir manuel adım gerekmez.
@@ -818,7 +848,18 @@ frontend/src/i18n/
 - Format algılama yalnızca dosyanın ilk 50 satırına bakıyor; teorik olarak bir dosyanın ortasında format değişirse (örn. rotasyon sırasında iki farklı uygulamanın loglarının birleşmesi gibi son derece nadir bir senaryo), bu değişiklik hiç fark edilmez.
 - `mostFrequentLoggers`/`mostFrequentThreads`/`mostFrequentErrors` listelerinde üst sınır UI'da uygulanmıyor (V4'ten devam eden bilinen eksikliğin V5'teki yeni listeler için de geçerli hali) — backend `MAX_DISTINCT_*` ile veri toplamayı sınırlıyor ama frontend tüm listeyi tek seferde render ediyor.
 
+**V6.1'e Özgü Bilinen Eksikler:**
+- `DOCKER_JSON` envelope biçimi (Docker'ın `json-file` log sürücüsü) desteklenmiyor — spec bunu "isteğe bağlı" olarak işaretlediği için kapsam dışı bırakıldı; yalnızca SYSLOG_RFC3164, SYSLOG_RFC5424 ve CONTAINER_CRI (containerd/CRI-O metin biçimi) destekleniyor.
+- RFC3164 syslog zaman damgasında yıl bilgisi yok (`Jul 30 06:55:07`); içinde bulunulan yıl varsayılarak tamamlanıyor — yıl sonunda/başında analiz edilen, önceki yıla ait bir dosyada bu yanlış yıl üretebilir.
+- Envelope sınıflandırması sezgiseldir, kesin değildir — toplayıcı önekleri birbirine çok benzeyebilir, güven eşiği altında kalan durumlarda dosya değiştirilmeden (düz metin gibi) işlenir.
+- CRI parça birleştirmede içerik bütünlüğü (checksum) doğrulaması yok — bu V6 kapsamı dışında bırakıldı, sadece parça sırası ve stream ayrımı garanti ediliyor.
+
 ## Karşılaşılan Sorunlar ve Çözümleri
+
+### V6.1'e Özgü Sorunlar
+
+- **`int`→`long` genişletmesinde art arda birkaç eksik/kısmi diff:** Sayaçları 64 bit'e genişletirken (Faz 9), bazı dosyalarda gerçek "eski hali/yeni hali" kod bloğu yerine "ilgili getter/setter'lar da değişti" gibi düz yazı özetler verildi — bu, birden fazla ardışık derleme hatasına (`AnalysisSummaryDto`, `AnalysisDetailDto`, stat entity'leri, `AnalysisHistoryService`'teki gözden kaçan bir yardımcı metot) yol açtı. Ayrıca bir kopyalama sırasında `AnalysisSummaryDto` içeriği yanlışlıkla `AnalysisJobSummaryDto.java` dosyasına yazıldı (duplicate class hatası). Hepsi, gerçek derleme çıktısı paylaşılıp eksik kalan HER dosyanın tam/literal içeriği verilerek çözüldü; bu olay, "her değişiklik literal olarak verilmeli, düz yazıyla özetlenmemeli" kuralının önemini bir kez daha gösterdi.
+- **`@Transactional`'ın aynı sınıf içinden çağrıldığında sessizce atlanması:** Analiz sonucu + istatistiklerin tek transaction'da kaydedilmesi gerekiyordu; `AnalysisJobRunner.handleSuccess()`'e doğrudan `@Transactional` eklemek çalışmazdı (self-invocation, V4'teki `@Async` sorununun kardeşi). Kaydetme mantığı ayrı bir bean'e (`AnalysisResultPersister`) taşınarak, dışarıdan çağrılan bir metotta gerçek transaction sınırı sağlandı.
 
 ### V5'e Özgü Sorunlar
 
@@ -984,4 +1025,39 @@ frontend/src/i18n/
 - Merkezi, sıralı kural setleriyle (normalizasyon, maskeleme) çalışmanın, dağınık/kopyalanmış mantığa göre hem test edilebilirliği hem bakımı nasıl kolaylaştırdığı
 - Jackson 3.x'in Spring Boot 4.x ile birlikte getirdiği paket adı (namespace) değişikliği ve bunun bağımlılık ağacı (`dependency:tree`) incelenerek nasıl teşhis edildiği
 - `@Transactional` test metotlarının, ayrı bir thread'de çalışan `@Async` servislerle nasıl çakışabileceği (commit edilmemiş veri görünürlüğü sorunu)
+
+---
+
+**V6.1'de yapay zekâdan hangi konularda destek alındığı:**
+- Envelope (syslog RFC3164/RFC5424, CRI) tespiti ve soyma katmanının tasarımı, format tespitinden önce çalışacak şekilde pipeline'a yerleştirilmesi
+- CRI bölünmüş kayıt birleştirmenin, taşıma katmanı sorunu olarak multiline stack trace gruplamasından (log içeriği katmanı) bilinçli olarak ayrı bir bileşene çıkarılması
+- Format güven skoru ve devam satırı/exception/unparsed-satır sayımı hatalarının kök nedeninin (tek bir yanlış yedek kural) teşhisi ve ortak bir `ContinuationLineDetector`'a çıkarılması
+- Kademeli zaman çizelgesi, transactional toplu kaydetme ve 64 bit sayaç genişletmesinin tasarımı ve uygulanması
+- Gerçek bir `journalctl` çıktısının fixture olarak hazırlanması
+
+**Envelope desenleri için alınan destek:**
+- Spec'teki örnek satırlar (`Jul 30 06:55:07 dc05 java[2172]: ...`, `<134>1 2026-07-30T...`, `... stdout F ...`) birebir eşleşecek regex'ler istendi; her birinin V1-V5 fixture'larıyla (spring-boot, json, nginx, apache, plain-text) yanlış eşleşmediği ayrıca kontrol edildi.
+
+**Atomik/yarış senaryoları için alınan destek:**
+- CRI birleştirmede "aynı anda yalnızca bir açık kayıt" ve "stdout/stderr karışmaması" gereksinimleri, tek bir `StringBuilder` tutan ve stream değişiminde açık grubu kontrollü sonlandıran bir tasarımla karşılandı.
+
+**Checkpoint/byte-offset promptları:** V6.1 kapsamında henüz yok (V6.3'te ele alınacak).
+
+**Yapay zekânın ürettiği kodlarda yapılan manuel değişiklikler:**
+- Yok — tüm düzeltmeler (bkz. Karşılaşılan Sorunlar) kullanıcının gerçek derleme/test çıktısını paylaşması üzerine yapay zeka tarafından yapıldı, kullanıcı kod satırı düzenlemedi.
+
+**Reddedilen veya hatalı bulunan öneriler:**
+- Format güven skoru hesabında devam satırı tespitine "girintili satır + önceki kaydın hata olması" nüansının eklenmesi, önce format tespiti bağlamında döngüsel bağımlılık gerekçesiyle atlanmıştı; kullanıcı "neden yapmıyoruz" diye sorunca, bu gerekçenin yalnızca örnekleme bağlamında geçerli olduğu, asıl multiline gruplamada (parser zaten belliyken) hiçbir engel olmadığı fark edildi ve eklendi.
+
+**Yapay zekâdan alınan kodların nasıl test edildiği:**
+- Her faz sonrası ilgili test sınıfları izole çalıştırıldı, önemli refactor'lardan (Faz 8, Faz 9) sonra tam `./mvnw clean test` suite'i çalıştırıldı.
+- CRI/envelope davranışı hem izole birim testleriyle (`CriPartialRecordAssemblerTest`, `EnvelopeDetectorTest`) hem gerçek job akışı üzerinden uçtan uca (`AnalysisJobV6EnvelopeTest`) doğrulandı.
+- Transaction rollback davranışı, gerçek bir DB constraint ihlali (aşırı uzun logger adı) tetiklenerek test edildi — varsayımla değil, gerçek bir hatayla.
+
+**V6.1 sırasında öğrenilen konular:**
+- Toplayıcı (syslog/CRI) önek biçimleri ve bunların log analiz pipeline'ında neden en başta ele alınması gerektiği
+- Taşıma katmanı ile log içeriği katmanı arasındaki ayrım ve bunun bileşen tasarımına nasıl yansıtılması gerektiği
+- Bir güven skoru hesabında paydaya neyin dahil edilip edilmeyeceğinin sonucu nasıl kökten değiştirebileceği
+- `@Transactional`'ın self-invocation sınırlaması ve bunun etrafından dolaşmanın (ayrı bean'e çıkarma) V4'teki `@Async` deneyiminden nasıl genellenebildiği
+- Kod değişikliklerini literal diff olarak vermenin (özetlemek yerine) neden kritik olduğu — bu dersin sert biçimde, gerçek derleme hatalarıyla öğrenildiği
 - Otomatik testlerin (ne kadar kapsamlı olursa olsun) gerçek, büyük ve çeşitli veriyle yapılan MANUEL testlerin yerini tutamayacağı — bu projede en az bir gerçek, kullanıcı tarafından bulunan eksiklik (timestamp ayrıştırma) sadece manuel UI testiyle ortaya çıktı
