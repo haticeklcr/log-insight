@@ -241,7 +241,7 @@ public class AnalysisJobRunner {
                 aggregator.flush().ifPresent(group -> processGroup(group, selectedParser, accumulator, timelineAggregator, filterCriteria));
             }
 
-            int totalRecords = accumulator.getParsedEntryCount() + accumulator.getUnparsedLineCount();
+            long totalRecords = accumulator.getParsedEntryCount() + accumulator.getUnparsedLineCount();
             if (totalRecords > 0) {
                 double unparsedPercentage = (accumulator.getUnparsedLineCount() * 100.0) / totalRecords;
                 if (unparsedPercentage > maxUnparsedLinePercentage) {

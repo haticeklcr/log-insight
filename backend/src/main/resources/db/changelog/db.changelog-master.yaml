@@ -39,3 +39,5 @@ databaseChangeLog:
       file: db/changelog/019-add-detected-envelope-to-log-analysis.yaml
   - include:
       file: db/changelog/020-add-timeline-granularity-to-log-analysis.yaml
+  - include:
+      file: db/changelog/021-widen-analysis-counters-to-bigint.yaml

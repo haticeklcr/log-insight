@@ -10,31 +10,31 @@ import java.util.Map;
 public class AnalysisResultAccumulator {
 
     private static class ErrorGroup {
-        int count;
+        long count;
         String sampleRawMessage;
     }
 
     private final int maxDistinctLoggers;
     private final int maxDistinctErrorGroups;
 
-    private int totalLines;
-    private int parsedEntryCount;
-    private int unparsedLineCount;
-    private int infoCount;
-    private int warningCount;
-    private int errorCount;
-    private int exceptionCount;
-    private int multilineExceptionCount;
-    private int timestampPresentCount;
-    private int levelPresentCount;
-    private int messagePresentCount;
+    private long totalLines;
+    private long parsedEntryCount;
+    private long unparsedLineCount;
+    private long infoCount;
+    private long warningCount;
+    private long errorCount;
+    private long exceptionCount;
+    private long multilineExceptionCount;
+    private long timestampPresentCount;
+    private long levelPresentCount;
+    private long messagePresentCount;
     private Instant firstLogTimestamp;
     private Instant lastLogTimestamp;
 
-    private final Map<String, Integer> loggerCounts = new LinkedHashMap<>();
-    private final Map<String, Integer> threadCounts = new LinkedHashMap<>();
-    private final Map<Integer, Integer> statusCodeCounts = new LinkedHashMap<>();
-    private final Map<String, Integer> httpMethodCounts = new LinkedHashMap<>();
+    private final Map<String, Long> loggerCounts = new LinkedHashMap<>();
+    private final Map<String, Long> threadCounts = new LinkedHashMap<>();
+    private final Map<Integer, Long> statusCodeCounts = new LinkedHashMap<>();
+    private final Map<String, Long> httpMethodCounts = new LinkedHashMap<>();
     private final Map<String, ErrorGroup> normalizedErrorGroups = new LinkedHashMap<>();
 
     public AnalysisResultAccumulator(int maxDistinctLoggers, int maxDistinctErrorGroups) {
@@ -92,7 +92,7 @@ public class AnalysisResultAccumulator {
             mergeBounded(threadCounts, entry.getThread(), maxDistinctLoggers);
         }
         if (entry.getStatusCode() != null) {
-            statusCodeCounts.merge(entry.getStatusCode(), 1, Integer::sum);
+            statusCodeCounts.merge(entry.getStatusCode(), 1L, Long::sum);
         }
         if (entry.getMethod() != null) {
             mergeBounded(httpMethodCounts, entry.getMethod(), maxDistinctLoggers);
@@ -117,54 +117,54 @@ public class AnalysisResultAccumulator {
         group.count++;
     }
 
-    private void mergeBounded(Map<String, Integer> counts, String key, int maxDistinct) {
+    private void mergeBounded(Map<String, Long> counts, String key, int maxDistinct) {
         if (!counts.containsKey(key) && counts.size() >= maxDistinct) {
             return;
         }
-        counts.merge(key, 1, Integer::sum);
+        counts.merge(key, 1L, Long::sum);
     }
 
-    public int getTotalLines() {
+    public long getTotalLines() {
         return totalLines;
     }
 
-    public int getParsedEntryCount() {
+    public long getParsedEntryCount() {
         return parsedEntryCount;
     }
 
-    public int getUnparsedLineCount() {
+    public long getUnparsedLineCount() {
         return unparsedLineCount;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public int getWarningCount() {
+    public long getWarningCount() {
         return warningCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public int getMultilineExceptionCount() {
+    public long getMultilineExceptionCount() {
         return multilineExceptionCount;
     }
 
-    public int getTimestampPresentCount() {
+    public long getTimestampPresentCount() {
         return timestampPresentCount;
     }
 
-    public int getLevelPresentCount() {
+    public long getLevelPresentCount() {
         return levelPresentCount;
     }
 
-    public int getMessagePresentCount() {
+    public long getMessagePresentCount() {
         return messagePresentCount;
     }
 
@@ -176,19 +176,19 @@ public class AnalysisResultAccumulator {
         return lastLogTimestamp;
     }
 
-    public Map<String, Integer> getLoggerCounts() {
+    public Map<String, Long> getLoggerCounts() {
         return loggerCounts;
     }
 
-    public Map<String, Integer> getThreadCounts() {
+    public Map<String, Long> getThreadCounts() {
         return threadCounts;
     }
 
-    public Map<Integer, Integer> getStatusCodeCounts() {
+    public Map<Integer, Long> getStatusCodeCounts() {
         return statusCodeCounts;
     }
 
-    public Map<String, Integer> getHttpMethodCounts() {
+    public Map<String, Long> getHttpMethodCounts() {
         return httpMethodCounts;
     }
 
@@ -198,14 +198,14 @@ public class AnalysisResultAccumulator {
         return result;
     }
 
-    public Map<String, Integer> getNormalizedErrorCounts() {
-        Map<String, Integer> result = new LinkedHashMap<>();
+    public Map<String, Long> getNormalizedErrorCounts() {
+        Map<String, Long> result = new LinkedHashMap<>();
         normalizedErrorGroups.forEach((key, group) -> result.put(key, group.count));
         return result;
     }
 
     public int computeParseQualityScore() {
-        int totalRecords = parsedEntryCount + unparsedLineCount;
+        long totalRecords = parsedEntryCount + unparsedLineCount;
         if (totalRecords == 0) {
             return 0;
         }

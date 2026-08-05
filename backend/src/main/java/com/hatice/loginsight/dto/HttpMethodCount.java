@@ -3,12 +3,12 @@ package com.hatice.loginsight.dto;
 public class HttpMethodCount {
 
     private String httpMethod;
-    private int count;
+    private long count;
 
     public HttpMethodCount() {
     }
 
-    public HttpMethodCount(String httpMethod, int count) {
+    public HttpMethodCount(String httpMethod, long count) {
         this.httpMethod = httpMethod;
         this.count = count;
     }
@@ -21,11 +21,11 @@ public class HttpMethodCount {
         this.httpMethod = httpMethod;
     }
 
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 }

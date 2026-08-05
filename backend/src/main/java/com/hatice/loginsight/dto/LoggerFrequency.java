@@ -3,12 +3,12 @@ package com.hatice.loginsight.dto;
 public class LoggerFrequency {
 
     private String loggerName;
-    private int count;
+    private long count;
 
     public LoggerFrequency() {
     }
 
-    public LoggerFrequency(String loggerName, int count) {
+    public LoggerFrequency(String loggerName, long count) {
         this.loggerName = loggerName;
         this.count = count;
     }
@@ -21,11 +21,11 @@ public class LoggerFrequency {
         this.loggerName = loggerName;
     }
 
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 }

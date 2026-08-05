@@ -15,11 +15,11 @@ public class LogTimelineAggregator {
     };
 
     private static class BucketCounts {
-        int total;
-        int info;
-        int warn;
-        int error;
-        int exception;
+        long total;
+        long info;
+        long warn;
+        long error;
+        long exception;
 
         void merge(BucketCounts other) {
             total += other.total;

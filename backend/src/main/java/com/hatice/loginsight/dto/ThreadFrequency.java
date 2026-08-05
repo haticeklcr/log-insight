@@ -3,12 +3,12 @@ package com.hatice.loginsight.dto;
 public class ThreadFrequency {
 
     private String threadName;
-    private int count;
+    private long count;
 
     public ThreadFrequency() {
     }
 
-    public ThreadFrequency(String threadName, int count) {
+    public ThreadFrequency(String threadName, long count) {
         this.threadName = threadName;
         this.count = count;
     }
@@ -21,11 +21,11 @@ public class ThreadFrequency {
         this.threadName = threadName;
     }
 
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 }

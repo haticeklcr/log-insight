@@ -3,12 +3,12 @@ package com.hatice.loginsight.dto;
 public class StatusCodeCount {
 
     private int statusCode;
-    private int count;
+    private long count;
 
     public StatusCodeCount() {
     }
 
-    public StatusCodeCount(int statusCode, int count) {
+    public StatusCodeCount(int statusCode, long count) {
         this.statusCode = statusCode;
         this.count = count;
     }
@@ -21,11 +21,11 @@ public class StatusCodeCount {
         this.statusCode = statusCode;
     }
 
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 }

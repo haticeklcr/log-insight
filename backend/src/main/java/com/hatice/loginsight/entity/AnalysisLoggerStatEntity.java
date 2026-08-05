@@ -22,12 +22,12 @@ public class AnalysisLoggerStatEntity {
     private String loggerName;
 
     @Column(name = "entry_count", nullable = false)
-    private int entryCount;
+    private long entryCount;
 
     public AnalysisLoggerStatEntity() {
     }
 
-    public AnalysisLoggerStatEntity(Long logAnalysisId, String loggerName, int entryCount) {
+    public AnalysisLoggerStatEntity(Long logAnalysisId, String loggerName, long entryCount) {
         this.logAnalysisId = logAnalysisId;
         this.loggerName = loggerName;
         this.entryCount = entryCount;
@@ -57,11 +57,11 @@ public class AnalysisLoggerStatEntity {
         this.loggerName = loggerName;
     }
 
-    public int getEntryCount() {
+    public long getEntryCount() {
         return entryCount;
     }
 
-    public void setEntryCount(int entryCount) {
+    public void setEntryCount(long entryCount) {
         this.entryCount = entryCount;
     }
 }

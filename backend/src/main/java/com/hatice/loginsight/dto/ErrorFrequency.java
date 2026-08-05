@@ -4,17 +4,17 @@ public class ErrorFrequency {
 
     private String message;
     private String normalizedMessage;
-    private int count;
+    private long count;
 
     public ErrorFrequency() {
     }
 
-    public ErrorFrequency(String message, int count) {
+    public ErrorFrequency(String message, long count) {
         this.message = message;
         this.count = count;
     }
 
-    public ErrorFrequency(String message, String normalizedMessage, int count) {
+    public ErrorFrequency(String message, String normalizedMessage, long count) {
         this.message = message;
         this.normalizedMessage = normalizedMessage;
         this.count = count;
@@ -36,11 +36,11 @@ public class ErrorFrequency {
         this.normalizedMessage = normalizedMessage;
     }
 
-    public int getCount() {
+    public long getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(long count) {
         this.count = count;
     }
 }

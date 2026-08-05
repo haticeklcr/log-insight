@@ -9,16 +9,16 @@ public class AnalysisSummaryDto {
     private String analysisName;
     private long fileSize;
     private Instant analyzedAt;
-    private int totalLines;
-    private int errorCount;
-    private int exceptionCount;
+    private long totalLines;
+    private long errorCount;
+    private long exceptionCount;
     private long processingDurationMs;
 
     public AnalysisSummaryDto() {
     }
 
     public AnalysisSummaryDto(Long id, String fileName, String analysisName, long fileSize, Instant analyzedAt,
-                               int totalLines, int errorCount, int exceptionCount, long processingDurationMs) {
+                               long totalLines, long errorCount, long exceptionCount, long processingDurationMs) {
         this.id = id;
         this.fileName = fileName;
         this.analysisName = analysisName;
@@ -70,27 +70,27 @@ public class AnalysisSummaryDto {
         this.analyzedAt = analyzedAt;
     }
 
-    public int getTotalLines() {
+    public long getTotalLines() {
         return totalLines;
     }
 
-    public void setTotalLines(int totalLines) {
+    public void setTotalLines(long totalLines) {
         this.totalLines = totalLines;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 

@@ -24,25 +24,25 @@ public class AnalysisTimelineStatEntity {
     private Instant bucketStart;
 
     @Column(name = "total_count", nullable = false)
-    private int totalCount;
+    private long totalCount;
 
     @Column(name = "info_count", nullable = false)
-    private int infoCount;
+    private long infoCount;
 
     @Column(name = "warn_count", nullable = false)
-    private int warnCount;
+    private long warnCount;
 
     @Column(name = "error_count", nullable = false)
-    private int errorCount;
+    private long errorCount;
 
     @Column(name = "exception_count", nullable = false)
-    private int exceptionCount;
+    private long exceptionCount;
 
     public AnalysisTimelineStatEntity() {
     }
 
-    public AnalysisTimelineStatEntity(Long logAnalysisId, Instant bucketStart, int totalCount,
-                                       int infoCount, int warnCount, int errorCount, int exceptionCount) {
+    public AnalysisTimelineStatEntity(Long logAnalysisId, Instant bucketStart, long totalCount,
+                                       long infoCount, long warnCount, long errorCount, long exceptionCount) {
         this.logAnalysisId = logAnalysisId;
         this.bucketStart = bucketStart;
         this.totalCount = totalCount;
@@ -76,43 +76,43 @@ public class AnalysisTimelineStatEntity {
         this.bucketStart = bucketStart;
     }
 
-    public int getTotalCount() {
+    public long getTotalCount() {
         return totalCount;
     }
 
-    public void setTotalCount(int totalCount) {
+    public void setTotalCount(long totalCount) {
         this.totalCount = totalCount;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public void setInfoCount(int infoCount) {
+    public void setInfoCount(long infoCount) {
         this.infoCount = infoCount;
     }
 
-    public int getWarnCount() {
+    public long getWarnCount() {
         return warnCount;
     }
 
-    public void setWarnCount(int warnCount) {
+    public void setWarnCount(long warnCount) {
         this.warnCount = warnCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 }

@@ -47,7 +47,7 @@ class LogTimelineAggregatorTest {
 
         List<AnalysisTimelineStatEntity> entities = aggregator.toEntities(1L);
 
-        int totalRecorded = entities.stream().mapToInt(AnalysisTimelineStatEntity::getTotalCount).sum();
+        long totalRecorded = entities.stream().mapToLong(AnalysisTimelineStatEntity::getTotalCount).sum();
         assertEquals(5, totalRecorded);
         assertTrue(entities.size() <= 3, "Saatlik birlestirme sonrasi bucket sayisi limiti asmamali");
     }

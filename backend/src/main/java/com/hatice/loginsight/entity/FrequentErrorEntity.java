@@ -29,17 +29,17 @@ public class FrequentErrorEntity {
     private String normalizedMessage;
 
     @Column(name = "occurrence_count", nullable = false)
-    private int occurrenceCount;
+    private long occurrenceCount;
 
     public FrequentErrorEntity() {
     }
 
-    public FrequentErrorEntity(String message, int occurrenceCount) {
+    public FrequentErrorEntity(String message, long occurrenceCount) {
         this.message = message;
         this.occurrenceCount = occurrenceCount;
     }
 
-    public FrequentErrorEntity(String message, String normalizedMessage, int occurrenceCount) {
+    public FrequentErrorEntity(String message, String normalizedMessage, long occurrenceCount) {
         this.message = message;
         this.normalizedMessage = normalizedMessage;
         this.occurrenceCount = occurrenceCount;
@@ -77,11 +77,11 @@ public class FrequentErrorEntity {
         this.normalizedMessage = normalizedMessage;
     }
 
-    public int getOccurrenceCount() {
+    public long getOccurrenceCount() {
         return occurrenceCount;
     }
 
-    public void setOccurrenceCount(int occurrenceCount) {
+    public void setOccurrenceCount(long occurrenceCount) {
         this.occurrenceCount = occurrenceCount;
     }
 }

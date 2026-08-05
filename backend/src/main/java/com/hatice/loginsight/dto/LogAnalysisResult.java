@@ -6,11 +6,11 @@ public class LogAnalysisResult {
 
     private Long id;
     private String fileName;
-    private int totalLines;
-    private int infoCount;
-    private int warningCount;
-    private int errorCount;
-    private int exceptionCount;
+    private long totalLines;
+    private long infoCount;
+    private long warningCount;
+    private long errorCount;
+    private long exceptionCount;
     private List<ErrorFrequency> mostFrequentErrors;
 
     public LogAnalysisResult() {
@@ -32,43 +32,43 @@ public class LogAnalysisResult {
         this.fileName = fileName;
     }
 
-    public int getTotalLines() {
+    public long getTotalLines() {
         return totalLines;
     }
 
-    public void setTotalLines(int totalLines) {
+    public void setTotalLines(long totalLines) {
         this.totalLines = totalLines;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public void setInfoCount(int infoCount) {
+    public void setInfoCount(long infoCount) {
         this.infoCount = infoCount;
     }
 
-    public int getWarningCount() {
+    public long getWarningCount() {
         return warningCount;
     }
 
-    public void setWarningCount(int warningCount) {
+    public void setWarningCount(long warningCount) {
         this.warningCount = warningCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 

@@ -22,12 +22,12 @@ public class AnalysisStatusCodeStatEntity {
     private int statusCode;
 
     @Column(name = "entry_count", nullable = false)
-    private int entryCount;
+    private long entryCount;
 
     public AnalysisStatusCodeStatEntity() {
     }
 
-    public AnalysisStatusCodeStatEntity(Long logAnalysisId, int statusCode, int entryCount) {
+    public AnalysisStatusCodeStatEntity(Long logAnalysisId, int statusCode, long entryCount) {
         this.logAnalysisId = logAnalysisId;
         this.statusCode = statusCode;
         this.entryCount = entryCount;
@@ -57,11 +57,11 @@ public class AnalysisStatusCodeStatEntity {
         this.statusCode = statusCode;
     }
 
-    public int getEntryCount() {
+    public long getEntryCount() {
         return entryCount;
     }
 
-    public void setEntryCount(int entryCount) {
+    public void setEntryCount(long entryCount) {
         this.entryCount = entryCount;
     }
 }

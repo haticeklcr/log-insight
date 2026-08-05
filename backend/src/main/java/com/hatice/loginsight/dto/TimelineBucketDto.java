@@ -5,17 +5,17 @@ import java.time.Instant;
 public class TimelineBucketDto {
 
     private Instant bucketStart;
-    private int totalCount;
-    private int infoCount;
-    private int warnCount;
-    private int errorCount;
-    private int exceptionCount;
+    private long totalCount;
+    private long infoCount;
+    private long warnCount;
+    private long errorCount;
+    private long exceptionCount;
 
     public TimelineBucketDto() {
     }
 
-    public TimelineBucketDto(Instant bucketStart, int totalCount, int infoCount, int warnCount,
-                              int errorCount, int exceptionCount) {
+    public TimelineBucketDto(Instant bucketStart, long totalCount, long infoCount, long warnCount,
+                              long errorCount, long exceptionCount) {
         this.bucketStart = bucketStart;
         this.totalCount = totalCount;
         this.infoCount = infoCount;
@@ -32,43 +32,43 @@ public class TimelineBucketDto {
         this.bucketStart = bucketStart;
     }
 
-    public int getTotalCount() {
+    public long getTotalCount() {
         return totalCount;
     }
 
-    public void setTotalCount(int totalCount) {
+    public void setTotalCount(long totalCount) {
         this.totalCount = totalCount;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public void setInfoCount(int infoCount) {
+    public void setInfoCount(long infoCount) {
         this.infoCount = infoCount;
     }
 
-    public int getWarnCount() {
+    public long getWarnCount() {
         return warnCount;
     }
 
-    public void setWarnCount(int warnCount) {
+    public void setWarnCount(long warnCount) {
         this.warnCount = warnCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 }

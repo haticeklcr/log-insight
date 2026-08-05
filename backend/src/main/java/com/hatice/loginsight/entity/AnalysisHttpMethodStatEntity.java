@@ -22,12 +22,12 @@ public class AnalysisHttpMethodStatEntity {
     private String httpMethod;
 
     @Column(name = "entry_count", nullable = false)
-    private int entryCount;
+    private long entryCount;
 
     public AnalysisHttpMethodStatEntity() {
     }
 
-    public AnalysisHttpMethodStatEntity(Long logAnalysisId, String httpMethod, int entryCount) {
+    public AnalysisHttpMethodStatEntity(Long logAnalysisId, String httpMethod, long entryCount) {
         this.logAnalysisId = logAnalysisId;
         this.httpMethod = httpMethod;
         this.entryCount = entryCount;
@@ -57,11 +57,11 @@ public class AnalysisHttpMethodStatEntity {
         this.httpMethod = httpMethod;
     }
 
-    public int getEntryCount() {
+    public long getEntryCount() {
         return entryCount;
     }
 
-    public void setEntryCount(int entryCount) {
+    public void setEntryCount(long entryCount) {
         this.entryCount = entryCount;
     }
 }

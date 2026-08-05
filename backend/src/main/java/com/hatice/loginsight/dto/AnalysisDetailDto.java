@@ -11,22 +11,22 @@ public class AnalysisDetailDto {
     private long fileSize;
     private Instant analyzedAt;
     private long processingDurationMs;
-    private int totalLines;
-    private int infoCount;
-    private int warningCount;
-    private int errorCount;
-    private int exceptionCount;
+    private long totalLines;
+    private long infoCount;
+    private long warningCount;
+    private long errorCount;
+    private long exceptionCount;
     private List<ErrorFrequency> mostFrequentErrors;
 
     private String requestedParserType;
     private String detectedLogFormat;
     private String detectedEnvelope;
-    private Integer parsedEntryCount;
-    private Integer unparsedLineCount;
+    private Long parsedEntryCount;
+    private Long unparsedLineCount;
     private Double unparsedLinePercentage;
     private Instant firstLogTimestamp;
     private Instant lastLogTimestamp;
-    private Integer multilineExceptionCount;
+    private Long multilineExceptionCount;
     private List<LoggerFrequency> mostFrequentLoggers;
     private List<ThreadFrequency> mostFrequentThreads;
     private List<StatusCodeCount> statusCodeDistribution;
@@ -90,43 +90,43 @@ public class AnalysisDetailDto {
         this.processingDurationMs = processingDurationMs;
     }
 
-    public int getTotalLines() {
+    public long getTotalLines() {
         return totalLines;
     }
 
-    public void setTotalLines(int totalLines) {
+    public void setTotalLines(long totalLines) {
         this.totalLines = totalLines;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public void setInfoCount(int infoCount) {
+    public void setInfoCount(long infoCount) {
         this.infoCount = infoCount;
     }
 
-    public int getWarningCount() {
+    public long getWarningCount() {
         return warningCount;
     }
 
-    public void setWarningCount(int warningCount) {
+    public void setWarningCount(long warningCount) {
         this.warningCount = warningCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 
@@ -162,19 +162,19 @@ public class AnalysisDetailDto {
         this.detectedEnvelope = detectedEnvelope;
     }
 
-    public Integer getParsedEntryCount() {
+    public Long getParsedEntryCount() {
         return parsedEntryCount;
     }
 
-    public void setParsedEntryCount(Integer parsedEntryCount) {
+    public void setParsedEntryCount(Long parsedEntryCount) {
         this.parsedEntryCount = parsedEntryCount;
     }
 
-    public Integer getUnparsedLineCount() {
+    public Long getUnparsedLineCount() {
         return unparsedLineCount;
     }
 
-    public void setUnparsedLineCount(Integer unparsedLineCount) {
+    public void setUnparsedLineCount(Long unparsedLineCount) {
         this.unparsedLineCount = unparsedLineCount;
     }
 
@@ -202,11 +202,11 @@ public class AnalysisDetailDto {
         this.lastLogTimestamp = lastLogTimestamp;
     }
 
-    public Integer getMultilineExceptionCount() {
+    public Long getMultilineExceptionCount() {
         return multilineExceptionCount;
     }
 
-    public void setMultilineExceptionCount(Integer multilineExceptionCount) {
+    public void setMultilineExceptionCount(Long multilineExceptionCount) {
         this.multilineExceptionCount = multilineExceptionCount;
     }
 

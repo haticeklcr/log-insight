@@ -22,12 +22,12 @@ public class AnalysisThreadStatEntity {
     private String threadName;
 
     @Column(name = "entry_count", nullable = false)
-    private int entryCount;
+    private long entryCount;
 
     public AnalysisThreadStatEntity() {
     }
 
-    public AnalysisThreadStatEntity(Long logAnalysisId, String threadName, int entryCount) {
+    public AnalysisThreadStatEntity(Long logAnalysisId, String threadName, long entryCount) {
         this.logAnalysisId = logAnalysisId;
         this.threadName = threadName;
         this.entryCount = entryCount;
@@ -57,11 +57,11 @@ public class AnalysisThreadStatEntity {
         this.threadName = threadName;
     }
 
-    public int getEntryCount() {
+    public long getEntryCount() {
         return entryCount;
     }
 
-    public void setEntryCount(int entryCount) {
+    public void setEntryCount(long entryCount) {
         this.entryCount = entryCount;
     }
 }

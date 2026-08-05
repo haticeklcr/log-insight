@@ -147,7 +147,7 @@ public class AnalysisHistoryService {
         dto.setExceptionCount(entity.getExceptionCount());
 
         List<ErrorFrequency> frequentErrors = entity.getFrequentErrors().stream()
-                .sorted((a, b) -> b.getOccurrenceCount() - a.getOccurrenceCount())
+                .sorted((a, b) -> Long.compare(b.getOccurrenceCount(), a.getOccurrenceCount()))
                 .map(fe -> new ErrorFrequency(fe.getMessage(), fe.getNormalizedMessage(), fe.getOccurrenceCount()))
                 .collect(Collectors.toList());
         dto.setMostFrequentErrors(frequentErrors);
@@ -195,12 +195,12 @@ public class AnalysisHistoryService {
     }
 
     private Double computeUnparsedLinePercentage(LogAnalysisEntity entity) {
-        Integer parsed = entity.getParsedEntryCount();
-        Integer unparsed = entity.getUnparsedLineCount();
+        Long parsed = entity.getParsedEntryCount();
+        Long unparsed = entity.getUnparsedLineCount();
         if (parsed == null || unparsed == null) {
             return null;
         }
-        int total = parsed + unparsed;
+        long total = parsed + unparsed;
         if (total == 0) {
             return 0.0;
         }

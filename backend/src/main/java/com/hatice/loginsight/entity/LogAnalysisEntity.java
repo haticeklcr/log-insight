@@ -28,19 +28,19 @@ public class LogAnalysisEntity {
     private long fileSize;
 
     @Column(name = "total_lines", nullable = false)
-    private int totalLines;
+    private long totalLines;
 
     @Column(name = "info_count", nullable = false)
-    private int infoCount;
+    private long infoCount;
 
     @Column(name = "warning_count", nullable = false)
-    private int warningCount;
+    private long warningCount;
 
     @Column(name = "error_count", nullable = false)
-    private int errorCount;
+    private long errorCount;
 
     @Column(name = "exception_count", nullable = false)
-    private int exceptionCount;
+    private long exceptionCount;
 
     @Column(name = "analyzed_at", nullable = false)
     private Instant analyzedAt;
@@ -61,10 +61,10 @@ public class LogAnalysisEntity {
     private String detectedEnvelope;
 
     @Column(name = "parsed_entry_count")
-    private Integer parsedEntryCount;
+    private Long parsedEntryCount;
 
     @Column(name = "unparsed_line_count")
-    private Integer unparsedLineCount;
+    private Long unparsedLineCount;
 
     @Column(name = "first_log_timestamp")
     private Instant firstLogTimestamp;
@@ -73,7 +73,7 @@ public class LogAnalysisEntity {
     private Instant lastLogTimestamp;
 
     @Column(name = "multiline_exception_count")
-    private Integer multilineExceptionCount;
+    private Long multilineExceptionCount;
 
     @Column(name = "parse_quality_score")
     private Integer parseQualityScore;
@@ -125,43 +125,43 @@ public class LogAnalysisEntity {
         this.fileSize = fileSize;
     }
 
-    public int getTotalLines() {
+    public long getTotalLines() {
         return totalLines;
     }
 
-    public void setTotalLines(int totalLines) {
+    public void setTotalLines(long totalLines) {
         this.totalLines = totalLines;
     }
 
-    public int getInfoCount() {
+    public long getInfoCount() {
         return infoCount;
     }
 
-    public void setInfoCount(int infoCount) {
+    public void setInfoCount(long infoCount) {
         this.infoCount = infoCount;
     }
 
-    public int getWarningCount() {
+    public long getWarningCount() {
         return warningCount;
     }
 
-    public void setWarningCount(int warningCount) {
+    public void setWarningCount(long warningCount) {
         this.warningCount = warningCount;
     }
 
-    public int getErrorCount() {
+    public long getErrorCount() {
         return errorCount;
     }
 
-    public void setErrorCount(int errorCount) {
+    public void setErrorCount(long errorCount) {
         this.errorCount = errorCount;
     }
 
-    public int getExceptionCount() {
+    public long getExceptionCount() {
         return exceptionCount;
     }
 
-    public void setExceptionCount(int exceptionCount) {
+    public void setExceptionCount(long exceptionCount) {
         this.exceptionCount = exceptionCount;
     }
 
@@ -221,19 +221,19 @@ public class LogAnalysisEntity {
         this.detectedEnvelope = detectedEnvelope;
     }
 
-    public Integer getParsedEntryCount() {
+    public Long getParsedEntryCount() {
         return parsedEntryCount;
     }
 
-    public void setParsedEntryCount(Integer parsedEntryCount) {
+    public void setParsedEntryCount(Long parsedEntryCount) {
         this.parsedEntryCount = parsedEntryCount;
     }
 
-    public Integer getUnparsedLineCount() {
+    public Long getUnparsedLineCount() {
         return unparsedLineCount;
     }
 
-    public void setUnparsedLineCount(Integer unparsedLineCount) {
+    public void setUnparsedLineCount(Long unparsedLineCount) {
         this.unparsedLineCount = unparsedLineCount;
     }
 
@@ -253,11 +253,11 @@ public class LogAnalysisEntity {
         this.lastLogTimestamp = lastLogTimestamp;
     }
 
-    public Integer getMultilineExceptionCount() {
+    public Long getMultilineExceptionCount() {
         return multilineExceptionCount;
     }
 
-    public void setMultilineExceptionCount(Integer multilineExceptionCount) {
+    public void setMultilineExceptionCount(Long multilineExceptionCount) {
         this.multilineExceptionCount = multilineExceptionCount;
     }
 
