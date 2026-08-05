@@ -393,6 +393,7 @@ public class AnalysisJobRunner {
         entity.setFormatDetectionSampleSize(sampleSize);
         entity.setMatchedSampleCount(matchedSampleCount);
         entity.setParseQualityScore(accumulator.computeParseQualityScore());
+        entity.setTimelineGranularity(timelineAggregator.getGranularityName());
 
         Map<String, String> sampleMessages = accumulator.getNormalizedErrorSampleMessages();
         accumulator.getNormalizedErrorCounts().forEach((normalizedMessage, count) ->

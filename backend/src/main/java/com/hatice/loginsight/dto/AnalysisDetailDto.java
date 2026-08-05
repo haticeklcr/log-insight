@@ -33,6 +33,7 @@ public class AnalysisDetailDto {
     private List<HttpMethodCount> httpMethodDistribution;
     private List<TimelineBucketDto> timeline;
     private Integer parseQualityScore;
+    private String timelineGranularity;
     private Integer formatConfidence;
     private Integer formatDetectionSampleSize;
     private Integer matchedSampleCount;
@@ -255,6 +256,14 @@ public class AnalysisDetailDto {
 
     public void setParseQualityScore(Integer parseQualityScore) {
         this.parseQualityScore = parseQualityScore;
+    }
+
+    public String getTimelineGranularity() {
+        return timelineGranularity;
+    }
+
+    public void setTimelineGranularity(String timelineGranularity) {
+        this.timelineGranularity = timelineGranularity;
     }
 
     public Integer getFormatConfidence() {

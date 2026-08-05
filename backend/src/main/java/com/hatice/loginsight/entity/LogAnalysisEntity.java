@@ -87,6 +87,9 @@ public class LogAnalysisEntity {
     @Column(name = "matched_sample_count")
     private Integer matchedSampleCount;
 
+    @Column(name = "timeline_granularity", length = 20)
+    private String timelineGranularity;
+
     @OneToMany(mappedBy = "logAnalysis", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FrequentErrorEntity> frequentErrors = new ArrayList<>();
 
@@ -264,6 +267,14 @@ public class LogAnalysisEntity {
 
     public void setParseQualityScore(Integer parseQualityScore) {
         this.parseQualityScore = parseQualityScore;
+    }
+
+    public String getTimelineGranularity() {
+        return timelineGranularity;
+    }
+
+    public void setTimelineGranularity(String timelineGranularity) {
+        this.timelineGranularity = timelineGranularity;
     }
 
     public Integer getFormatConfidence() {

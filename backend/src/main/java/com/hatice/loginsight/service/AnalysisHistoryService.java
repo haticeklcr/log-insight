@@ -162,6 +162,7 @@ public class AnalysisHistoryService {
         dto.setLastLogTimestamp(entity.getLastLogTimestamp());
         dto.setMultilineExceptionCount(entity.getMultilineExceptionCount());
         dto.setParseQualityScore(entity.getParseQualityScore());
+        dto.setTimelineGranularity(entity.getTimelineGranularity());
         dto.setFormatConfidence(entity.getFormatConfidence());
         dto.setFormatDetectionSampleSize(entity.getFormatDetectionSampleSize());
         dto.setMatchedSampleCount(entity.getMatchedSampleCount());

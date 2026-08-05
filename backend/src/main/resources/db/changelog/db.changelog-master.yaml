@@ -37,3 +37,5 @@ databaseChangeLog:
       file: db/changelog/018-add-detected-envelope-to-analysis-job.yaml
   - include:
       file: db/changelog/019-add-detected-envelope-to-log-analysis.yaml
+  - include:
+      file: db/changelog/020-add-timeline-granularity-to-log-analysis.yaml

@@ -10,8 +10,9 @@ import java.util.TreeMap;
 
 public class LogTimelineAggregator {
 
-    private static final long MINUTE_SECONDS = 60L;
-    private static final long HOUR_SECONDS = 3600L;
+    private static final long[] GRANULARITY_SECONDS = {
+            60L, 300L, 900L, 3600L, 21600L, 86400L, 604800L
+    };
 
     private static class BucketCounts {
         int total;
@@ -30,7 +31,7 @@ public class LogTimelineAggregator {
     }
 
     private final int maxBuckets;
-    private long granularitySeconds = MINUTE_SECONDS;
+    private int granularityIndex = 0;
     private Map<Instant, BucketCounts> buckets = new TreeMap<>();
 
     public LogTimelineAggregator(int maxBuckets) {
@@ -42,13 +43,13 @@ public class LogTimelineAggregator {
             return;
         }
 
-        Instant bucketStart = floorToGranularity(timestamp, granularitySeconds);
+        Instant bucketStart = floorToGranularity(timestamp, GRANULARITY_SECONDS[granularityIndex]);
 
-        if (granularitySeconds == MINUTE_SECONDS
-                && !buckets.containsKey(bucketStart)
-                && buckets.size() >= maxBuckets) {
-            rebucketToHourly();
-            bucketStart = floorToGranularity(timestamp, granularitySeconds);
+        while (!buckets.containsKey(bucketStart)
+                && buckets.size() >= maxBuckets
+                && granularityIndex < GRANULARITY_SECONDS.length - 1) {
+            rebucketToNextGranularity();
+            bucketStart = floorToGranularity(timestamp, GRANULARITY_SECONDS[granularityIndex]);
         }
 
         BucketCounts counts = buckets.computeIfAbsent(bucketStart, key -> new BucketCounts());
@@ -65,20 +66,33 @@ public class LogTimelineAggregator {
         }
     }
 
-    private void rebucketToHourly() {
+    private void rebucketToNextGranularity() {
+        granularityIndex++;
+        long nextGranularitySeconds = GRANULARITY_SECONDS[granularityIndex];
         Map<Instant, BucketCounts> rebucketed = new TreeMap<>();
         for (Map.Entry<Instant, BucketCounts> entry : buckets.entrySet()) {
-            Instant hourStart = floorToGranularity(entry.getKey(), HOUR_SECONDS);
-            rebucketed.computeIfAbsent(hourStart, key -> new BucketCounts()).merge(entry.getValue());
+            Instant newBucketStart = floorToGranularity(entry.getKey(), nextGranularitySeconds);
+            rebucketed.computeIfAbsent(newBucketStart, key -> new BucketCounts()).merge(entry.getValue());
         }
         buckets = rebucketed;
-        granularitySeconds = HOUR_SECONDS;
     }
 
     private Instant floorToGranularity(Instant instant, long granularitySeconds) {
         long epochSecond = instant.getEpochSecond();
         long floored = epochSecond - (epochSecond % granularitySeconds);
         return Instant.ofEpochSecond(floored);
+    }
+
+    public String getGranularityName() {
+        return switch (granularityIndex) {
+            case 0 -> "MINUTE";
+            case 1 -> "FIVE_MINUTES";
+            case 2 -> "FIFTEEN_MINUTES";
+            case 3 -> "HOUR";
+            case 4 -> "SIX_HOURS";
+            case 5 -> "DAY";
+            default -> "WEEK";
+        };
     }
 
     public List<AnalysisTimelineStatEntity> toEntities(Long logAnalysisId) {

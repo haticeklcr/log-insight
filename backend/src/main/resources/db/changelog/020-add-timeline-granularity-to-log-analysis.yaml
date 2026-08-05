@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-add-timeline-granularity-to-log-analysis
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: timeline_granularity
+                  type: VARCHAR(20)
+      rollback:
+        - dropColumn:
+            tableName: log_analysis
+            columns:
+              - column:
+                  name: timeline_granularity
