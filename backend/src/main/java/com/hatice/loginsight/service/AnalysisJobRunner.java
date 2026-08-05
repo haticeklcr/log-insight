@@ -1,10 +1,6 @@
 package com.hatice.loginsight.service;
 
-import com.hatice.loginsight.entity.AnalysisHttpMethodStatEntity;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
-import com.hatice.loginsight.entity.AnalysisLoggerStatEntity;
-import com.hatice.loginsight.entity.AnalysisStatusCodeStatEntity;
-import com.hatice.loginsight.entity.AnalysisThreadStatEntity;
 import com.hatice.loginsight.entity.FrequentErrorEntity;
 import com.hatice.loginsight.entity.JobStatus;
 import com.hatice.loginsight.entity.LogAnalysisEntity;
@@ -28,13 +24,7 @@ import com.hatice.loginsight.parser.MultilineExceptionAggregator;
 import com.hatice.loginsight.parser.MultilineExceptionInfo;
 import com.hatice.loginsight.parser.ParsedLogEntry;
 import com.hatice.loginsight.parser.SensitiveDataMasker;
-import com.hatice.loginsight.repository.AnalysisHttpMethodStatRepository;
 import com.hatice.loginsight.repository.AnalysisJobRepository;
-import com.hatice.loginsight.repository.AnalysisLoggerStatRepository;
-import com.hatice.loginsight.repository.AnalysisStatusCodeStatRepository;
-import com.hatice.loginsight.repository.AnalysisThreadStatRepository;
-import com.hatice.loginsight.repository.AnalysisTimelineStatRepository;
-import com.hatice.loginsight.repository.LogAnalysisRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +50,7 @@ public class AnalysisJobRunner {
     private static final Logger log = LoggerFactory.getLogger(AnalysisJobRunner.class);
 
     private final AnalysisJobRepository analysisJobRepository;
-    private final LogAnalysisRepository logAnalysisRepository;
+    private final AnalysisResultPersister analysisResultPersister;
     private final TempFileStorageService tempFileStorageService;
     private final LogParserFactory parserFactory;
     private final LogFormatDetector formatDetector;
@@ -68,11 +58,6 @@ public class AnalysisJobRunner {
     private final SensitiveDataMasker sensitiveDataMasker;
     private final LogMessageNormalizer logMessageNormalizer;
     private final ExceptionInfoExtractor exceptionInfoExtractor;
-    private final AnalysisLoggerStatRepository loggerStatRepository;
-    private final AnalysisThreadStatRepository threadStatRepository;
-    private final AnalysisStatusCodeStatRepository statusCodeStatRepository;
-    private final AnalysisHttpMethodStatRepository httpMethodStatRepository;
-    private final AnalysisTimelineStatRepository timelineStatRepository;
 
     private final int progressInterval;
     private final int maxStackTraceLines;
@@ -84,7 +69,7 @@ public class AnalysisJobRunner {
     private final int formatConfidenceThreshold;
 
     public AnalysisJobRunner(AnalysisJobRepository analysisJobRepository,
-                              LogAnalysisRepository logAnalysisRepository,
+                              AnalysisResultPersister analysisResultPersister,
                               TempFileStorageService tempFileStorageService,
                               LogParserFactory parserFactory,
                               LogFormatDetector formatDetector,
@@ -92,11 +77,6 @@ public class AnalysisJobRunner {
                               SensitiveDataMasker sensitiveDataMasker,
                               LogMessageNormalizer logMessageNormalizer,
                               ExceptionInfoExtractor exceptionInfoExtractor,
-                              AnalysisLoggerStatRepository loggerStatRepository,
-                              AnalysisThreadStatRepository threadStatRepository,
-                              AnalysisStatusCodeStatRepository statusCodeStatRepository,
-                              AnalysisHttpMethodStatRepository httpMethodStatRepository,
-                              AnalysisTimelineStatRepository timelineStatRepository,
                               @Value("${app.analysis-job.progress-interval}") int progressInterval,
                               @Value("${app.log-parsing.max-stack-trace-lines}") int maxStackTraceLines,
                               @Value("${app.log-parsing.max-log-line-length}") int maxLogLineLength,
@@ -106,7 +86,7 @@ public class AnalysisJobRunner {
                               @Value("${app.log-parsing.max-unparsed-line-percentage}") int maxUnparsedLinePercentage,
                               @Value("${app.log-format-detection.confidence-threshold}") int formatConfidenceThreshold) {
         this.analysisJobRepository = analysisJobRepository;
-        this.logAnalysisRepository = logAnalysisRepository;
+        this.analysisResultPersister = analysisResultPersister;
         this.tempFileStorageService = tempFileStorageService;
         this.parserFactory = parserFactory;
         this.formatDetector = formatDetector;
@@ -114,11 +94,6 @@ public class AnalysisJobRunner {
         this.sensitiveDataMasker = sensitiveDataMasker;
         this.logMessageNormalizer = logMessageNormalizer;
         this.exceptionInfoExtractor = exceptionInfoExtractor;
-        this.loggerStatRepository = loggerStatRepository;
-        this.threadStatRepository = threadStatRepository;
-        this.statusCodeStatRepository = statusCodeStatRepository;
-        this.httpMethodStatRepository = httpMethodStatRepository;
-        this.timelineStatRepository = timelineStatRepository;
         this.progressInterval = progressInterval;
         this.maxStackTraceLines = maxStackTraceLines;
         this.maxLogLineLength = maxLogLineLength;
@@ -399,13 +374,7 @@ public class AnalysisJobRunner {
         accumulator.getNormalizedErrorCounts().forEach((normalizedMessage, count) ->
                 entity.addFrequentError(new FrequentErrorEntity(sampleMessages.get(normalizedMessage), normalizedMessage, count)));
 
-        LogAnalysisEntity savedEntity = logAnalysisRepository.save(entity);
-
-        saveLoggerStats(savedEntity.getId(), accumulator);
-        saveThreadStats(savedEntity.getId(), accumulator);
-        saveStatusCodeStats(savedEntity.getId(), accumulator);
-        saveHttpMethodStats(savedEntity.getId(), accumulator);
-        timelineStatRepository.saveAll(timelineAggregator.toEntities(savedEntity.getId()));
+        LogAnalysisEntity savedEntity = analysisResultPersister.persist(entity, accumulator, timelineAggregator);
 
         job.setStatus(JobStatus.SUCCEEDED);
         job.setProgress(100);
@@ -414,26 +383,6 @@ public class AnalysisJobRunner {
         job = analysisJobRepository.save(job);
 
         tempFileStorageService.delete(job.getId());
-    }
-
-    private void saveLoggerStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
-        accumulator.getLoggerCounts().forEach((loggerName, count) ->
-                loggerStatRepository.save(new AnalysisLoggerStatEntity(logAnalysisId, loggerName, count)));
-    }
-
-    private void saveThreadStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
-        accumulator.getThreadCounts().forEach((threadName, count) ->
-                threadStatRepository.save(new AnalysisThreadStatEntity(logAnalysisId, threadName, count)));
-    }
-
-    private void saveStatusCodeStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
-        accumulator.getStatusCodeCounts().forEach((statusCode, count) ->
-                statusCodeStatRepository.save(new AnalysisStatusCodeStatEntity(logAnalysisId, statusCode, count)));
-    }
-
-    private void saveHttpMethodStats(Long logAnalysisId, AnalysisResultAccumulator accumulator) {
-        accumulator.getHttpMethodCounts().forEach((httpMethod, count) ->
-                httpMethodStatRepository.save(new AnalysisHttpMethodStatEntity(logAnalysisId, httpMethod, count)));
     }
 
     private void handleFailure(AnalysisJobEntity job, String errorCode, String errorMessage) {
