@@ -27,7 +27,8 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 - **Transactional, toplu analiz sonucu kaydetme** — analiz kaydı + tüm istatistikler tek bir veritabanı transaction'ında, `saveAll` ile toplu yazılıyor; yarım kalan analiz kaydı oluşmuyor
 - **64 bit sayaçlar** — tüm satır/kayıt sayaçları `BIGINT`/`long`'a genişletildi, gigabayt ölçekli dosyalarda 32 bit taşma riski ortadan kalktı
 - **4 yeni Liquibase migration'ı (018-021)**
-- **34 yeni backend testi**, tümü V1-V5 testleriyle birlikte yeşil
+- **`detectedEnvelope` ve `timelineGranularity`'nin arayüzde gösterilmesi** — Analiz Detay ekranında "Algılanan Envelope" kartı ve zaman çizelgesi kademesi notu
+- **34 yeni backend testi, 4 yeni frontend testi**, tümü V1-V5 testleriyle birlikte yeşil
 
 ## V4 ile Eklenen Özellikler
 - Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)

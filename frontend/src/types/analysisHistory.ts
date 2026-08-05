@@ -68,6 +68,7 @@ export interface AnalysisDetail {
   mostFrequentErrors: ErrorFrequency[];
   requestedParserType?: string | null;
   detectedLogFormat?: string | null;
+  detectedEnvelope?: string | null;
   parsedEntryCount?: number | null;
   unparsedLineCount?: number | null;
   unparsedLinePercentage?: number | null;
@@ -79,6 +80,7 @@ export interface AnalysisDetail {
   statusCodeDistribution?: StatusCodeCount[];
   httpMethodDistribution?: HttpMethodCount[];
   timeline?: TimelineBucket[];
+  timelineGranularity?: string | null;
   parseQualityScore?: number | null;
   formatConfidence?: number | null;
   formatDetectionSampleSize?: number | null;

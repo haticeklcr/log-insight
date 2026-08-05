@@ -40,6 +40,45 @@ describe("AnalysisDetailView", () => {
     expect(screen.getByText("95")).toBeInTheDocument();
   });
 
+  it("algılanan envelope değerini gösterir", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      detectedLogFormat: "SPRING_BOOT",
+      detectedEnvelope: "SYSLOG_RFC3164",
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getByText("SYSLOG_RFC3164")).toBeInTheDocument();
+  });
+
+  it("envelope tespit edilmediğinde bunu belirten metni gösterir", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      detectedLogFormat: "SPRING_BOOT",
+      detectedEnvelope: "NONE",
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getByText("Envelope bulunamadı")).toBeInTheDocument();
+  });
+
+  it("zaman çizelgesi kademesini gösterir", () => {
+    const detail: AnalysisDetail = {
+      ...BASE_DETAIL,
+      detectedLogFormat: "SPRING_BOOT",
+      timelineGranularity: "HOUR",
+      timeline: [
+        { bucketStart: "2026-01-01T10:00:00Z", totalCount: 5, infoCount: 3, warnCount: 1, errorCount: 1, exceptionCount: 0 },
+      ],
+    };
+
+    render(<AnalysisDetailView detail={detail} onBack={vi.fn()} />);
+
+    expect(screen.getByText(/HOUR/)).toBeInTheDocument();
+  });
+
   it("timeline verisi olduğunda zaman çizelgesi grafiğini gösterir", () => {
     const detail: AnalysisDetail = {
       ...BASE_DETAIL,

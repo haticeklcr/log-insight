@@ -50,6 +50,14 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
               value={detail.requestedParserType ?? t("analysisDetail.autoDetect")}
             />
             <StatCard label={t("analysisDetail.detectedFormat")} value={detail.detectedLogFormat ?? ""} />
+            <StatCard
+              label={t("analysisDetail.detectedEnvelope")}
+              value={
+                detail.detectedEnvelope && detail.detectedEnvelope !== "NONE"
+                  ? detail.detectedEnvelope
+                  : t("analysisDetail.envelopeNone")
+              }
+            />
             {detail.parseQualityScore != null && (
               <StatCard label={t("analysisDetail.parseQualityScore")} value={detail.parseQualityScore} />
             )}
@@ -89,6 +97,11 @@ export default function AnalysisDetailView({ detail, onBack }: AnalysisDetailVie
 
       <section>
         <h3 className={styles.sectionTitle}>{t("analysisDetail.timeline")}</h3>
+        {detail.timelineGranularity != null && (
+          <p className={styles.maskingNote}>
+            {t("analysisDetail.timelineGranularity")}: {detail.timelineGranularity}
+          </p>
+        )}
         <LogTimelineChart buckets={detail.timeline ?? []} />
       </section>
 
