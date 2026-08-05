@@ -49,7 +49,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -145,11 +144,13 @@ public class AnalysisJobRunner {
         Path filePath = tempFileStorageService.resolve(jobId);
 
         try {
-            List<String> sampleLines = formatDetector.collectSampleLines(filePath, formatDetector.getDefaultSampleSize());
+            List<String> envelopeSampleLines = formatDetector.collectSampleLines(filePath, formatDetector.getDefaultSampleSize());
 
-            LogEnvelopeDetectionResult envelopeDetectionResult = envelopeDetector.detect(sampleLines);
+            LogEnvelopeDetectionResult envelopeDetectionResult = envelopeDetector.detect(envelopeSampleLines);
             LogEnvelope detectedEnvelope = envelopeDetectionResult.getDetectedEnvelope();
-            List<String> formatDetectionSampleLines = stripSampleLines(sampleLines, detectedEnvelope);
+            List<String> formatDetectionSampleLines = formatDetector.collectSampleLines(
+                    filePath, formatDetector.getDefaultSampleSize(),
+                    rawLine -> applyEnvelopeStripping(rawLine, detectedEnvelope));
 
             LogFormat requestedFormat = parseRequestedFormat(job.getRequestedParserType());
             LogFormat selectedFormat;
@@ -293,17 +294,6 @@ public class AnalysisJobRunner {
 
     private boolean isSet(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private List<String> stripSampleLines(List<String> sampleLines, LogEnvelope detectedEnvelope) {
-        if (detectedEnvelope == LogEnvelope.NONE) {
-            return sampleLines;
-        }
-        List<String> stripped = new ArrayList<>(sampleLines.size());
-        for (String sampleLine : sampleLines) {
-            stripped.add(applyEnvelopeStripping(sampleLine, detectedEnvelope));
-        }
-        return stripped;
     }
 
     private String applyEnvelopeStripping(String rawLine, LogEnvelope detectedEnvelope) {

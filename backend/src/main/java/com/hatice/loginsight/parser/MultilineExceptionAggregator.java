@@ -4,21 +4,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 public class MultilineExceptionAggregator {
-
-    private static final Pattern MORE_PATTERN = Pattern.compile("^\\.\\.\\.\\s*\\d+\\s*more$");
-    private static final Pattern CAUSED_BY_PATTERN = Pattern.compile("^Caused by:.*$");
-    private static final Pattern SUPPRESSED_PATTERN = Pattern.compile("^Suppressed:.*$");
-    private static final Pattern BARE_EXCEPTION_PATTERN =
-            Pattern.compile("^[\\w$]+(\\.[\\w$]+)*Exception:?.*$");
 
     private final LogParser activeParser;
     private final int maxStackTraceLines;
 
     private String currentHeader;
     private Instant currentHeaderEnvelopeTimestamp;
+    private boolean currentHeaderIsErrorRecord;
     private List<String> currentContinuation;
     private boolean currentTruncated;
     private boolean inGroup = false;
@@ -57,9 +51,15 @@ public class MultilineExceptionAggregator {
     private void startNewGroup(String headerLine, Instant envelopeTimestamp) {
         currentHeader = headerLine;
         currentHeaderEnvelopeTimestamp = envelopeTimestamp;
+        currentHeaderIsErrorRecord = isErrorRecord(headerLine);
         currentContinuation = new ArrayList<>();
         currentTruncated = false;
         inGroup = true;
+    }
+
+    private boolean isErrorRecord(String headerLine) {
+        ParsedLogEntry entry = activeParser.parse(headerLine);
+        return entry != null && "ERROR".equals(entry.getLevel());
     }
 
     private void appendContinuation(String rawLine) {
@@ -75,14 +75,6 @@ public class MultilineExceptionAggregator {
     }
 
     private boolean isContinuationLine(String rawLine) {
-        String trimmed = rawLine.trim();
-        if (trimmed.startsWith("at ")
-                || MORE_PATTERN.matcher(trimmed).matches()
-                || CAUSED_BY_PATTERN.matcher(trimmed).matches()
-                || SUPPRESSED_PATTERN.matcher(trimmed).matches()
-                || BARE_EXCEPTION_PATTERN.matcher(trimmed).matches()) {
-            return true;
-        }
-        return !activeParser.canParse(rawLine);
+        return ContinuationLineDetector.isContinuationLine(rawLine, currentHeaderIsErrorRecord);
     }
 }
