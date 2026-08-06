@@ -15,4 +15,6 @@ public interface AnalysisJobRepository
     List<AnalysisJobEntity> findByStatus(JobStatus status);
 
     Optional<AnalysisJobEntity> findByAnalysisId(Long analysisId);
+
+    Optional<AnalysisJobEntity> findByUploadSessionId(UUID uploadSessionId);
 }

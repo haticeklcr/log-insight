@@ -12,8 +12,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,17 +33,20 @@ public class StartupRecoveryService {
     private final UploadSessionRepository uploadSessionRepository;
     private final ChunkedUploadStorageService chunkedUploadStorageService;
     private final UploadMergeRunner uploadMergeRunner;
+    private final AnalysisJobRunner analysisJobRunner;
 
     public StartupRecoveryService(AnalysisJobRepository analysisJobRepository,
                                    TempFileStorageService tempFileStorageService,
                                    UploadSessionRepository uploadSessionRepository,
                                    ChunkedUploadStorageService chunkedUploadStorageService,
-                                   UploadMergeRunner uploadMergeRunner) {
+                                   UploadMergeRunner uploadMergeRunner,
+                                   AnalysisJobRunner analysisJobRunner) {
         this.analysisJobRepository = analysisJobRepository;
         this.tempFileStorageService = tempFileStorageService;
         this.uploadSessionRepository = uploadSessionRepository;
         this.chunkedUploadStorageService = chunkedUploadStorageService;
         this.uploadMergeRunner = uploadMergeRunner;
+        this.analysisJobRunner = analysisJobRunner;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -96,7 +103,60 @@ public class StartupRecoveryService {
         for (UploadSessionEntity session : mergingSessions) {
             recoverMergingSession(session);
         }
+
+        List<UploadSessionEntity> consumedSessions =
+                uploadSessionRepository.findByStatusIn(List.of(UploadSessionStatus.CONSUMED));
+        for (UploadSessionEntity session : consumedSessions) {
+            recoverConsumedSession(session);
+        }
+
         cleanUpOrphanedUploadDirectories();
+    }
+
+    private void recoverConsumedSession(UploadSessionEntity session) {
+        UUID uploadId = session.getId();
+        boolean uploadFileExists = chunkedUploadStorageService.mergedFileExists(uploadId);
+        Optional<AnalysisJobEntity> maybeJob = analysisJobRepository.findByUploadSessionId(uploadId);
+
+        if (maybeJob.isEmpty()) {
+            // Job kaydı hiç oluşmamış — orijinal istek parametreleri (analiz adı, filtreler)
+            // kalıcı olmadığı için güvenli şekilde yeniden kurulamaz.
+            log.warn("uploadId={} CONSUMED ama iliskili job kaydi bulunamadi, FAILED yapiliyor", uploadId);
+            session.setStatus(UploadSessionStatus.FAILED);
+            session.setErrorCode("UPLOAD_JOB_CREATION_INCOMPLETE");
+            session.setErrorMessage("Yeniden başlatma sırasında bu oturuma bağlı bir analiz job'ı bulunamadı");
+            uploadSessionRepository.save(session);
+            return;
+        }
+
+        AnalysisJobEntity job = maybeJob.get();
+        boolean jobFileExists = tempFileStorageService.exists(job.getId());
+
+        if (!jobFileExists && uploadFileExists) {
+            log.warn("uploadId={} icin dosya tasima yeniden deneniyor (jobId={})", uploadId, job.getId());
+            try {
+                java.nio.file.Files.move(chunkedUploadStorageService.resolveMergedFile(uploadId),
+                        tempFileStorageService.resolve(job.getId()), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            jobFileExists = true;
+        }
+
+        if (!jobFileExists) {
+            log.warn("uploadId={} icin ne yukleme dosyasi ne is dosyasi bulundu, job FAILED yapiliyor", uploadId);
+            job.setStatus(JobStatus.FAILED);
+            job.setCompletedAt(Instant.now());
+            job.setErrorCode("ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE");
+            job.setErrorMessage("Yeniden başlatma sırasında analiz kaynağı dosya bulunamadı");
+            analysisJobRepository.save(job);
+            return;
+        }
+
+        if (job.getStatus() == JobStatus.PENDING) {
+            log.warn("uploadId={} icin analiz baslatiliyor (jobId={})", uploadId, job.getId());
+            analysisJobRunner.runAnalysis(job.getId());
+        }
     }
 
     private void recoverMergingSession(UploadSessionEntity session) {
