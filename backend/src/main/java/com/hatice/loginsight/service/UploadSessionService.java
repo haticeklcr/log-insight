@@ -174,7 +174,13 @@ public class UploadSessionService {
         }
 
         session.setStatus(UploadSessionStatus.MERGING);
-        UploadSessionEntity saved = uploadSessionRepository.save(session);
+        UploadSessionEntity saved;
+        try {
+            saved = uploadSessionRepository.saveAndFlush(session);
+        } catch (OptimisticLockingFailureException e) {
+            throw new UploadSessionNotInProgressException(
+                    "Oturum eşzamanlı bir istek tarafından zaten tamamlanmaya başlandı: " + uploadId);
+        }
         uploadMergeRunner.runMerge(uploadId);
         return saved;
     }
@@ -188,7 +194,7 @@ public class UploadSessionService {
         }
         session.setStatus(UploadSessionStatus.CONSUMED);
         try {
-            return uploadSessionRepository.save(session);
+            return uploadSessionRepository.saveAndFlush(session);
         } catch (OptimisticLockingFailureException e) {
             throw new UploadAlreadyConsumedException(
                     "Oturum eşzamanlı bir istek tarafından zaten tüketildi: " + uploadId);
