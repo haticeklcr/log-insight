@@ -14,6 +14,7 @@ FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 
 RUN addgroup --system spring && adduser --system --ingroup spring spring
+RUN mkdir -p /data/log-insight && chown -R spring:spring /data/log-insight
 USER spring:spring
 
 COPY --from=build /app/target/*.jar app.jar
