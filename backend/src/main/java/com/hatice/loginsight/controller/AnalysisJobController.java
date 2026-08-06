@@ -7,6 +7,7 @@ import com.hatice.loginsight.dto.CreateAnalysisJobResponse;
 import com.hatice.loginsight.dto.PagedResponse;
 import com.hatice.loginsight.entity.AnalysisJobEntity;
 import com.hatice.loginsight.entity.JobStatus;
+import com.hatice.loginsight.exception.InvalidJobInputException;
 import com.hatice.loginsight.service.AnalysisJobService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +32,8 @@ public class AnalysisJobController {
     }
 
     @PostMapping
-    public CreateAnalysisJobResponse createJob(@RequestParam("file") MultipartFile file,
+    public CreateAnalysisJobResponse createJob(@RequestParam(value = "file", required = false) MultipartFile file,
+                                                @RequestParam(value = "uploadId", required = false) UUID uploadId,
                                                 @RequestParam("analysisName") String analysisName,
                                                 @RequestParam(value = "parserType", required = false) String parserType,
                                                 @RequestParam(value = "startTime", required = false) String startTime,
@@ -43,8 +45,19 @@ public class AnalysisJobController {
                                                 @RequestParam(value = "statusCodes", required = false) String statusCodes,
                                                 @RequestParam(value = "httpMethods", required = false) String httpMethods,
                                                 @RequestParam(value = "pathContains", required = false) String pathContains) {
-        AnalysisJobEntity job = analysisJobService.createJob(file, analysisName, parserType, startTime, endTime,
-                levels, logger, thread, messageContains, statusCodes, httpMethods, pathContains);
+        boolean hasFile = file != null && !file.isEmpty();
+        boolean hasUploadId = uploadId != null;
+        if (hasFile == hasUploadId) {
+            throw new InvalidJobInputException(
+                    "İstek tam olarak bir tanesini içermeli: file veya uploadId");
+        }
+
+        AnalysisJobEntity job = hasFile
+                ? analysisJobService.createJob(file, analysisName, parserType, startTime, endTime,
+                        levels, logger, thread, messageContains, statusCodes, httpMethods, pathContains)
+                : analysisJobService.createJobFromUpload(uploadId, analysisName, parserType, startTime, endTime,
+                        levels, logger, thread, messageContains, statusCodes, httpMethods, pathContains);
+
         return new CreateAnalysisJobResponse(
                 job.getId(), job.getAnalysisName(), job.getStatus(), job.getProgress(), job.getCreatedAt());
     }

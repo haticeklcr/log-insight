@@ -137,6 +137,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ACTIVE_UPLOADS", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidJobInputException.class)
+    public ResponseEntity<ApiError> handleInvalidJobInput(InvalidJobInputException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_JOB_INPUT", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(

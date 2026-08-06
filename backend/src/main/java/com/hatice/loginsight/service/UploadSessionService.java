@@ -9,12 +9,14 @@ import com.hatice.loginsight.exception.InvalidChunkSizeException;
 import com.hatice.loginsight.exception.InvalidUploadRequestException;
 import com.hatice.loginsight.exception.TooManyActiveUploadsException;
 import com.hatice.loginsight.exception.UnsupportedFileTypeException;
+import com.hatice.loginsight.exception.UploadAlreadyConsumedException;
 import com.hatice.loginsight.exception.UploadIncompleteException;
 import com.hatice.loginsight.exception.UploadSessionExpiredException;
 import com.hatice.loginsight.exception.UploadSessionNotFoundException;
 import com.hatice.loginsight.exception.UploadSessionNotInProgressException;
 import com.hatice.loginsight.repository.UploadSessionRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
@@ -175,6 +177,22 @@ public class UploadSessionService {
         UploadSessionEntity saved = uploadSessionRepository.save(session);
         uploadMergeRunner.runMerge(uploadId);
         return saved;
+    }
+
+    @Transactional
+    public UploadSessionEntity consumeCompletedSession(UUID uploadId) {
+        UploadSessionEntity session = findSessionOrThrow(uploadId);
+        if (session.getStatus() != UploadSessionStatus.COMPLETED) {
+            throw new UploadAlreadyConsumedException(
+                    "Oturum COMPLETED durumunda değil (muhtemelen zaten tüketilmiş): " + session.getStatus());
+        }
+        session.setStatus(UploadSessionStatus.CONSUMED);
+        try {
+            return uploadSessionRepository.save(session);
+        } catch (OptimisticLockingFailureException e) {
+            throw new UploadAlreadyConsumedException(
+                    "Oturum eşzamanlı bir istek tarafından zaten tüketildi: " + uploadId);
+        }
     }
 
     @Transactional

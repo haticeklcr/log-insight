@@ -2,6 +2,7 @@ package com.hatice.loginsight.service;
 
 import com.hatice.loginsight.entity.AnalysisJobEntity;
 import com.hatice.loginsight.entity.JobStatus;
+import com.hatice.loginsight.entity.UploadSessionEntity;
 import com.hatice.loginsight.exception.InvalidAnalysisNameException;
 import com.hatice.loginsight.exception.InvalidDateRangeException;
 import com.hatice.loginsight.exception.InvalidParserTypeException;
@@ -21,6 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
@@ -33,6 +37,8 @@ public class AnalysisJobService {
     private final TempFileStorageService tempFileStorageService;
     private final AnalysisJobRunner analysisJobRunner;
     private final JobStateMachine jobStateMachine;
+    private final UploadSessionService uploadSessionService;
+    private final ChunkedUploadStorageService chunkedUploadStorageService;
     private final int maxRetry;
     private final AnalysisJobService self;
 
@@ -41,6 +47,8 @@ public class AnalysisJobService {
                                TempFileStorageService tempFileStorageService,
                                AnalysisJobRunner analysisJobRunner,
                                JobStateMachine jobStateMachine,
+                               UploadSessionService uploadSessionService,
+                               ChunkedUploadStorageService chunkedUploadStorageService,
                                @Value("${app.analysis-job.max-retry}") int maxRetry,
                                @Lazy AnalysisJobService self) {
         this.analysisJobRepository = analysisJobRepository;
@@ -48,6 +56,8 @@ public class AnalysisJobService {
         this.tempFileStorageService = tempFileStorageService;
         this.analysisJobRunner = analysisJobRunner;
         this.jobStateMachine = jobStateMachine;
+        this.uploadSessionService = uploadSessionService;
+        this.chunkedUploadStorageService = chunkedUploadStorageService;
         this.maxRetry = maxRetry;
         this.self = self;
     }
@@ -61,6 +71,55 @@ public class AnalysisJobService {
                                         String thread, String messageContains, String statusCodes,
                                         String httpMethods, String pathContains) {
         logFileValidator.validate(file);
+
+        AnalysisJobEntity job = buildBaseJob(analysisName, parserType, startTime, endTime, levels, logger,
+                thread, messageContains, statusCodes, httpMethods, pathContains);
+        job.setFileName(file.getOriginalFilename());
+        job.setFileSize(file.getSize());
+
+        AnalysisJobEntity savedJob = analysisJobRepository.save(job);
+
+        try {
+            tempFileStorageService.store(savedJob.getId(), file);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Dosya geçici olarak kaydedilirken hata oluştu", e);
+        }
+
+        analysisJobRunner.runAnalysis(savedJob.getId());
+
+        return savedJob;
+    }
+
+    public AnalysisJobEntity createJobFromUpload(UUID uploadId, String analysisName, String parserType,
+                                                  String startTime, String endTime, String levels, String logger,
+                                                  String thread, String messageContains, String statusCodes,
+                                                  String httpMethods, String pathContains) {
+        AnalysisJobEntity job = buildBaseJob(analysisName, parserType, startTime, endTime, levels, logger,
+                thread, messageContains, statusCodes, httpMethods, pathContains);
+
+        UploadSessionEntity session = uploadSessionService.consumeCompletedSession(uploadId);
+
+        job.setFileName(session.getFileName());
+        job.setFileSize(session.getFileSize());
+        job.setUploadSessionId(uploadId);
+
+        AnalysisJobEntity savedJob = analysisJobRepository.save(job);
+
+        Path mergedFile = chunkedUploadStorageService.resolveMergedFile(uploadId);
+        try {
+            Files.move(mergedFile, tempFileStorageService.resolve(savedJob.getId()), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Birleştirilmiş dosya analiz dizinine taşınırken hata oluştu", e);
+        }
+
+        analysisJobRunner.runAnalysis(savedJob.getId());
+
+        return savedJob;
+    }
+
+    private AnalysisJobEntity buildBaseJob(String analysisName, String parserType, String startTime, String endTime,
+                                            String levels, String logger, String thread, String messageContains,
+                                            String statusCodes, String httpMethods, String pathContains) {
         String trimmedName = validateAnalysisName(analysisName);
 
         LogFormat requestedFormat = validateAndParseParserType(parserType);
@@ -80,8 +139,6 @@ public class AnalysisJobService {
 
         AnalysisJobEntity job = new AnalysisJobEntity();
         job.setAnalysisName(trimmedName);
-        job.setFileName(file.getOriginalFilename());
-        job.setFileSize(file.getSize());
         job.setStatus(JobStatus.PENDING);
         job.setProgress(0);
         job.setRetryCount(0);
@@ -99,17 +156,7 @@ public class AnalysisJobService {
         job.setFilterHttpMethods(blankToNull(httpMethods));
         job.setFilterPathContains(blankToNull(pathContains));
 
-        AnalysisJobEntity savedJob = analysisJobRepository.save(job);
-
-        try {
-            tempFileStorageService.store(savedJob.getId(), file);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Dosya geçici olarak kaydedilirken hata oluştu", e);
-        }
-
-        analysisJobRunner.runAnalysis(savedJob.getId());
-
-        return savedJob;
+        return job;
     }
 
     private LogFormat validateAndParseParserType(String parserType) {
