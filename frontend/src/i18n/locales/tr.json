@@ -141,7 +141,20 @@
     "UNSUPPORTED_FILTER_FOR_PARSER": "Seçilen filtre, bu log formatı ile uyumlu değil",
     "SELECTED_PARSER_CANNOT_PARSE_FILE": "Seçilen log formatı bu dosyayla uyumlu değil",
     "LOG_FORMAT_COULD_NOT_BE_DETECTED": "Log formatı otomatik olarak algılanamadı",
-    "TOO_MANY_UNPARSED_LINES": "Dosyadaki satırların çok büyük bir kısmı ayrıştırılamadı"
+    "TOO_MANY_UNPARSED_LINES": "Dosyadaki satırların çok büyük bir kısmı ayrıştırılamadı",
+    "UPLOAD_SESSION_NOT_FOUND": "Yükleme oturumu bulunamadı",
+    "UPLOAD_SESSION_EXPIRED": "Yükleme oturumunun süresi doldu",
+    "UPLOAD_SESSION_NOT_IN_PROGRESS": "Yükleme oturumu bu işlem için uygun durumda değil",
+    "INVALID_CHUNK_INDEX": "Geçersiz parça numarası",
+    "INVALID_CHUNK_SIZE": "Parça boyutu beklenenle uyuşmuyor",
+    "CHUNK_ALREADY_EXISTS_WITH_DIFFERENT_SIZE": "Bu parça farklı bir boyutla zaten yüklenmiş",
+    "UPLOAD_INCOMPLETE": "Yükleme henüz tamamlanmadı, eksik parçalar var",
+    "UPLOAD_ALREADY_CONSUMED": "Bu yükleme zaten bir analize dönüştürülmüş",
+    "UPLOAD_MERGE_FAILED": "Parçalar birleştirilirken bir hata oluştu",
+    "INSUFFICIENT_DISK_SPACE": "Sunucuda yeterli disk alanı yok",
+    "TOO_MANY_ACTIVE_UPLOADS": "Aynı anda çok fazla aktif yükleme var, lütfen daha sonra tekrar deneyin",
+    "INVALID_JOB_INPUT": "İstek tam olarak bir dosya ya da bir uploadId içermeli",
+    "ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE": "Analiz kaynağı dosya artık mevcut değil"
   },
   "polling": {
     "unreachable": "Backend servisine ulaşılamadı. İş durumu güncellenemiyor.",

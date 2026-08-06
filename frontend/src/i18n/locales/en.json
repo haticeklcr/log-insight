@@ -141,7 +141,20 @@
     "UNSUPPORTED_FILTER_FOR_PARSER": "The selected filter is not supported for this log format",
     "SELECTED_PARSER_CANNOT_PARSE_FILE": "The selected log format is not compatible with this file",
     "LOG_FORMAT_COULD_NOT_BE_DETECTED": "The log format could not be automatically detected",
-    "TOO_MANY_UNPARSED_LINES": "Too large a portion of the file's lines could not be parsed"
+    "TOO_MANY_UNPARSED_LINES": "Too large a portion of the file's lines could not be parsed",
+    "UPLOAD_SESSION_NOT_FOUND": "Upload session not found",
+    "UPLOAD_SESSION_EXPIRED": "Upload session has expired",
+    "UPLOAD_SESSION_NOT_IN_PROGRESS": "Upload session is not in a valid state for this operation",
+    "INVALID_CHUNK_INDEX": "Invalid chunk index",
+    "INVALID_CHUNK_SIZE": "Chunk size does not match what was expected",
+    "CHUNK_ALREADY_EXISTS_WITH_DIFFERENT_SIZE": "This chunk was already uploaded with a different size",
+    "UPLOAD_INCOMPLETE": "Upload is not complete yet, some chunks are missing",
+    "UPLOAD_ALREADY_CONSUMED": "This upload has already been turned into an analysis",
+    "UPLOAD_MERGE_FAILED": "An error occurred while merging the chunks",
+    "INSUFFICIENT_DISK_SPACE": "The server does not have enough disk space",
+    "TOO_MANY_ACTIVE_UPLOADS": "Too many active uploads at once, please try again later",
+    "INVALID_JOB_INPUT": "The request must contain exactly one of a file or an uploadId",
+    "ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE": "The analysis source file is no longer available"
   },
   "polling": {
     "unreachable": "Could not reach the backend service. The job status cannot be updated.",
