@@ -87,6 +87,41 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "UNSUPPORTED_FILTER_FOR_PARSER", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(UploadSessionNotFoundException.class)
+    public ResponseEntity<ApiError> handleUploadSessionNotFound(UploadSessionNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "UPLOAD_SESSION_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UploadSessionExpiredException.class)
+    public ResponseEntity<ApiError> handleUploadSessionExpired(UploadSessionExpiredException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "UPLOAD_SESSION_EXPIRED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UploadSessionNotInProgressException.class)
+    public ResponseEntity<ApiError> handleUploadSessionNotInProgress(UploadSessionNotInProgressException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "UPLOAD_SESSION_NOT_IN_PROGRESS", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidChunkIndexException.class)
+    public ResponseEntity<ApiError> handleInvalidChunkIndex(InvalidChunkIndexException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_CHUNK_INDEX", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidChunkSizeException.class)
+    public ResponseEntity<ApiError> handleInvalidChunkSize(InvalidChunkSizeException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_CHUNK_SIZE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(UploadIncompleteException.class)
+    public ResponseEntity<ApiError> handleUploadIncomplete(UploadIncompleteException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "UPLOAD_INCOMPLETE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidUploadRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidUploadRequest(InvalidUploadRequestException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(
