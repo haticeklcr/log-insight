@@ -13,7 +13,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ChunkedUploadStorageService {
@@ -55,6 +57,10 @@ public class ChunkedUploadStorageService {
 
     public Path resolveMergedFile(UUID uploadId) {
         return resolveSessionDir(uploadId).resolve("data.log");
+    }
+
+    public boolean mergedFileExists(UUID uploadId) {
+        return Files.exists(resolveMergedFile(uploadId));
     }
 
     public ChunkWriteResult writePart(UUID uploadId, long chunkIndex, byte[] content) {
@@ -111,6 +117,26 @@ public class ChunkedUploadStorageService {
             }
         }
         return missing;
+    }
+
+    public List<UUID> listSessionDirectoryIds() {
+        try (var dirs = Files.list(baseDirectory)) {
+            return dirs.filter(Files::isDirectory)
+                    .map(path -> path.getFileName().toString())
+                    .map(this::parseUuid)
+                    .flatMap(Optional::stream)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private Optional<UUID> parseUuid(String name) {
+        try {
+            return Optional.of(UUID.fromString(name));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     public long getUsableSpace() {
