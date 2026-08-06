@@ -122,6 +122,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ChunkAlreadyExistsWithDifferentSizeException.class)
+    public ResponseEntity<ApiError> handleChunkAlreadyExistsWithDifferentSize(ChunkAlreadyExistsWithDifferentSizeException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "CHUNK_ALREADY_EXISTS_WITH_DIFFERENT_SIZE", ex.getMessage(), request);
+    }
+    
+    @ExceptionHandler(InsufficientDiskSpaceException.class)
+    public ResponseEntity<ApiError> handleInsufficientDiskSpace(InsufficientDiskSpaceException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.INSUFFICIENT_STORAGE, "INSUFFICIENT_DISK_SPACE", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(TooManyActiveUploadsException.class)
+    public ResponseEntity<ApiError> handleTooManyActiveUploads(TooManyActiveUploadsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ACTIVE_UPLOADS", ex.getMessage(), request);
+    }
+
     private ResponseEntity<ApiError> buildResponse(HttpStatus status, String errorCode, String message,
                                                      HttpServletRequest request) {
         ApiError apiError = new ApiError(

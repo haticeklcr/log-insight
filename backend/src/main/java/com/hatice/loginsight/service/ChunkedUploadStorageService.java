@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -55,12 +57,50 @@ public class ChunkedUploadStorageService {
         return resolveSessionDir(uploadId).resolve("data.log");
     }
 
-    public void writePart(UUID uploadId, long chunkIndex, byte[] content) {
+    public ChunkWriteResult writePart(UUID uploadId, long chunkIndex, byte[] content) {
+        Path target = resolvePartFile(uploadId, chunkIndex);
+
+        if (Files.exists(target)) {
+            return compareToExisting(target, content.length);
+        }
+
+        Path tempFile = target.resolveSibling(target.getFileName() + "." + UUID.randomUUID() + ".tmp");
         try {
-            Files.write(resolvePartFile(uploadId, chunkIndex), content);
+            Files.write(tempFile, content);
+            Files.move(tempFile, target, StandardCopyOption.ATOMIC_MOVE);
+            return ChunkWriteResult.WRITTEN;
+        } catch (FileAlreadyExistsException e) {
+            deleteQuietly(tempFile);
+            return compareToExisting(target, content.length);
+        } catch (IOException e) {
+            deleteQuietly(tempFile);
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private ChunkWriteResult compareToExisting(Path target, int incomingSize) {
+        try {
+            long existingSize = Files.size(target);
+            return existingSize == incomingSize
+                    ? ChunkWriteResult.ALREADY_EXISTS_SAME_SIZE
+                    : ChunkWriteResult.ALREADY_EXISTS_DIFFERENT_SIZE;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    private void deleteQuietly(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {
+            // en iyi çaba: yarışı kaybeden isteğin kendi geçici dosyasını temizlemesi, kritik değil
+        }
+    }
+
+    public enum ChunkWriteResult {
+        WRITTEN,
+        ALREADY_EXISTS_SAME_SIZE,
+        ALREADY_EXISTS_DIFFERENT_SIZE
     }
 
     public List<Long> findMissingPartIndices(UUID uploadId, long totalChunks) {
@@ -71,6 +111,71 @@ public class ChunkedUploadStorageService {
             }
         }
         return missing;
+    }
+
+    public long getUsableSpace() {
+        try {
+            return Files.getFileStore(baseDirectory).getUsableSpace();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public long computeUploadedBytes(UUID uploadId) {
+        Path partsDir = resolvePartsDir(uploadId);
+        if (!Files.exists(partsDir)) {
+            return 0L;
+        }
+        try (var files = Files.list(partsDir)) {
+            return files.filter(path -> path.getFileName().toString().endsWith(".part"))
+                    .mapToLong(this::sizeQuietly)
+                    .sum();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public long computeMergedBytes(UUID uploadId) {
+        Path sessionDir = resolveSessionDir(uploadId);
+        if (!Files.exists(sessionDir)) {
+            return 0L;
+        }
+        try (var files = Files.list(sessionDir)) {
+            return files.filter(path -> {
+                        String name = path.getFileName().toString();
+                        return name.startsWith("data.log") && name.endsWith(".tmp");
+                    })
+                    .mapToLong(this::sizeQuietly)
+                    .sum();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private long sizeQuietly(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException e) {
+            return 0L;
+        }
+    }
+
+    public void deletePartsDirectory(UUID uploadId) {
+        Path partsDir = resolvePartsDir(uploadId);
+        if (!Files.exists(partsDir)) {
+            return;
+        }
+        try (var walk = Files.walk(partsDir)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public void deleteSessionDirectory(UUID uploadId) {

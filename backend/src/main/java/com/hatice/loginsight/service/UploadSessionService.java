@@ -3,9 +3,11 @@ package com.hatice.loginsight.service;
 import com.hatice.loginsight.dto.UploadSessionStatusResponse;
 import com.hatice.loginsight.entity.UploadSessionEntity;
 import com.hatice.loginsight.entity.UploadSessionStatus;
+import com.hatice.loginsight.exception.InsufficientDiskSpaceException;
 import com.hatice.loginsight.exception.InvalidChunkIndexException;
 import com.hatice.loginsight.exception.InvalidChunkSizeException;
 import com.hatice.loginsight.exception.InvalidUploadRequestException;
+import com.hatice.loginsight.exception.TooManyActiveUploadsException;
 import com.hatice.loginsight.exception.UnsupportedFileTypeException;
 import com.hatice.loginsight.exception.UploadIncompleteException;
 import com.hatice.loginsight.exception.UploadSessionExpiredException;
@@ -29,23 +31,33 @@ public class UploadSessionService {
 
     private final UploadSessionRepository uploadSessionRepository;
     private final ChunkedUploadStorageService storageService;
+    private final UploadMergeRunner uploadMergeRunner;
     private final int chunkSize;
     private final Duration sessionTtl;
     private final int parallelism;
     private final DataSize maxFileSize;
+    private final int maxActiveSessions;
+    private final DataSize diskReserve;
+    private final Object sessionCreationLock = new Object();
 
     public UploadSessionService(UploadSessionRepository uploadSessionRepository,
                                  ChunkedUploadStorageService storageService,
+                                 UploadMergeRunner uploadMergeRunner,
                                  @Value("${app.upload.chunk-size}") DataSize chunkSize,
                                  @Value("${app.upload.session-ttl}") Duration sessionTtl,
                                  @Value("${app.upload.parallelism}") int parallelism,
-                                 @Value("${app.upload.max-file-size}") String maxFileSizeRaw) {
+                                 @Value("${app.upload.max-file-size}") String maxFileSizeRaw,
+                                 @Value("${app.upload.max-active-sessions}") int maxActiveSessions,
+                                 @Value("${app.upload.disk-reserve}") DataSize diskReserve) {
         this.uploadSessionRepository = uploadSessionRepository;
         this.storageService = storageService;
+        this.uploadMergeRunner = uploadMergeRunner;
         this.chunkSize = (int) chunkSize.toBytes();
         this.sessionTtl = sessionTtl;
         this.parallelism = parallelism;
         this.maxFileSize = isBlankOrZero(maxFileSizeRaw) ? null : DataSize.parse(maxFileSizeRaw);
+        this.maxActiveSessions = maxActiveSessions;
+        this.diskReserve = diskReserve;
     }
 
     private boolean isBlankOrZero(String value) {
@@ -56,7 +68,6 @@ public class UploadSessionService {
         return parallelism;
     }
 
-    @Transactional
     public UploadSessionEntity createSession(String fileName, long fileSize) {
         if (fileName == null || ALLOWED_EXTENSIONS.stream().noneMatch(ext -> fileName.toLowerCase().endsWith(ext))) {
             throw new UnsupportedFileTypeException("Sadece .log ve .txt uzantılı dosyalar desteklenir");
@@ -69,19 +80,50 @@ public class UploadSessionService {
                     "Dosya boyutu izin verilen maksimum sınırı (" + maxFileSize.toMegabytes() + "MB) aşıyor");
         }
 
-        UploadSessionEntity session = new UploadSessionEntity();
-        session.setFileName(fileName);
-        session.setFileSize(fileSize);
-        session.setChunkSize(chunkSize);
-        session.setTotalChunks((fileSize + chunkSize - 1) / chunkSize);
-        session.setStatus(UploadSessionStatus.IN_PROGRESS);
-        session.setMergeProgress(0);
-        session.setCreatedAt(Instant.now());
-        session.setExpiresAt(Instant.now().plus(sessionTtl));
+        synchronized (sessionCreationLock) {
+            checkActiveSessionLimitAndDiskSpace(fileSize);
 
-        UploadSessionEntity saved = uploadSessionRepository.save(session);
-        storageService.createSessionDirectory(saved.getId());
-        return saved;
+            UploadSessionEntity session = new UploadSessionEntity();
+            session.setFileName(fileName);
+            session.setFileSize(fileSize);
+            session.setChunkSize(chunkSize);
+            session.setTotalChunks((fileSize + chunkSize - 1) / chunkSize);
+            session.setStatus(UploadSessionStatus.IN_PROGRESS);
+            session.setMergeProgress(0);
+            session.setCreatedAt(Instant.now());
+            session.setExpiresAt(Instant.now().plus(sessionTtl));
+
+            UploadSessionEntity saved = uploadSessionRepository.save(session);
+            storageService.createSessionDirectory(saved.getId());
+            return saved;
+        }
+    }
+
+    private void checkActiveSessionLimitAndDiskSpace(long newFileSize) {
+        List<UploadSessionEntity> activeSessions = uploadSessionRepository.findByStatusIn(
+                List.of(UploadSessionStatus.IN_PROGRESS, UploadSessionStatus.MERGING));
+
+        if (activeSessions.size() >= maxActiveSessions) {
+            throw new TooManyActiveUploadsException(
+                    "Eşzamanlı aktif yükleme oturumu sınırına ulaşıldı: " + maxActiveSessions);
+        }
+
+        long totalReserved = activeSessions.stream().mapToLong(this::computeReservedBytes).sum();
+        long required = totalReserved + (2 * newFileSize) + diskReserve.toBytes();
+        long usableSpace = storageService.getUsableSpace();
+
+        if (usableSpace < required) {
+            throw new InsufficientDiskSpaceException(
+                    "Yetersiz disk alanı: gerekli " + required + " byte, kullanılabilir " + usableSpace + " byte");
+        }
+    }
+
+    private long computeReservedBytes(UploadSessionEntity session) {
+        return switch (session.getStatus()) {
+            case IN_PROGRESS -> (2 * session.getFileSize()) - storageService.computeUploadedBytes(session.getId());
+            case MERGING -> session.getFileSize() - storageService.computeMergedBytes(session.getId());
+            default -> 0L;
+        };
     }
 
     @Transactional
@@ -122,7 +164,6 @@ public class UploadSessionService {
                 session.getMergeProgress(), session.getExpiresAt());
     }
 
-    @Transactional
     public UploadSessionEntity completeSession(UUID uploadId) {
         UploadSessionEntity session = getActiveSession(uploadId);
         List<Long> missing = storageService.findMissingPartIndices(uploadId, session.getTotalChunks());
@@ -131,7 +172,9 @@ public class UploadSessionService {
         }
 
         session.setStatus(UploadSessionStatus.MERGING);
-        return uploadSessionRepository.save(session);
+        UploadSessionEntity saved = uploadSessionRepository.save(session);
+        uploadMergeRunner.runMerge(uploadId);
+        return saved;
     }
 
     @Transactional
