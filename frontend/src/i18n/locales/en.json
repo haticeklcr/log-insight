@@ -20,6 +20,24 @@
     "unsupportedType": "Only .log and .txt files can be selected",
     "noFileSelected": "Please select a file first"
   },
+  "chunkedUpload": {
+    "uploading": "Uploading",
+    "merging": "Merging",
+    "uploadCompleted": "Upload completed",
+    "uploadCancelled": "Upload cancelled",
+    "resumeFound": "Found an incomplete upload",
+    "resumeButton": "Resume",
+    "discardButton": "Discard",
+    "resumeMismatch": "The selected file does not match the incomplete upload",
+    "retryButton": "Retry",
+    "chunkRetrying": "Retrying chunk",
+    "insufficientDiskSpace": "Insufficient disk space",
+    "uploadExpired": "Upload session expired",
+    "remainingTime": "Remaining time",
+    "cancelButton": "Cancel",
+    "uploadFailed": "An error occurred while uploading",
+    "mergeFailed": "An error occurred while merging the chunks"
+  },
   "newAnalysis": {
     "nameLabel": "Analysis Name",
     "namePlaceholder": "E.g. Payment Service Night Logs",

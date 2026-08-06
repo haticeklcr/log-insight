@@ -20,6 +20,24 @@
     "unsupportedType": "Yalnızca .log ve .txt dosyaları seçilebilir",
     "noFileSelected": "Lütfen önce bir dosya seçin"
   },
+  "chunkedUpload": {
+    "uploading": "Yükleniyor",
+    "merging": "Birleştiriliyor",
+    "uploadCompleted": "Yükleme tamamlandı",
+    "uploadCancelled": "Yükleme iptal edildi",
+    "resumeFound": "Yarım kalmış yükleme bulundu",
+    "resumeButton": "Devam et",
+    "discardButton": "Vazgeç",
+    "resumeMismatch": "Seçilen dosya, yarım kalan yüklemeyle eşleşmiyor",
+    "retryButton": "Yeniden dene",
+    "chunkRetrying": "Parça yeniden deneniyor",
+    "insufficientDiskSpace": "Yetersiz disk alanı",
+    "uploadExpired": "Yükleme süresi doldu",
+    "remainingTime": "Kalan süre",
+    "cancelButton": "İptal",
+    "uploadFailed": "Yükleme sırasında bir hata oluştu",
+    "mergeFailed": "Parçalar birleştirilirken bir hata oluştu"
+  },
   "newAnalysis": {
     "nameLabel": "Analiz Adı",
     "namePlaceholder": "Örn. Ödeme Servisi Gece Logları",

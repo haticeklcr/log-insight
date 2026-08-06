@@ -1,0 +1,50 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-bg-sunken);
+}
+
+.phaseRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.progressTrack {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: var(--color-bg-surface-hover);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--color-accent-strong);
+  transition: width 0.2s ease;
+}
+
+.errorText {
+  margin: 0;
+  color: var(--color-status-offline);
+  font-size: 0.9rem;
+}
+
+.cancelButton {
+  align-self: flex-start;
+  padding: 0.4rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancelButton:hover {
+  background-color: var(--color-bg-surface-hover);
+}
