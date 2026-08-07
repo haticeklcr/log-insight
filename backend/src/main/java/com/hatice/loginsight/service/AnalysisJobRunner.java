@@ -38,6 +38,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class AnalysisJobRunner {
     private final LogMessageNormalizer logMessageNormalizer;
     private final ExceptionInfoExtractor exceptionInfoExtractor;
 
-    private final int progressInterval;
+    private final long analysisProgressIntervalMs;
     private final int maxStackTraceLines;
     private final int maxLogLineLength;
     private final int maxDistinctLoggers;
@@ -77,7 +78,7 @@ public class AnalysisJobRunner {
                               SensitiveDataMasker sensitiveDataMasker,
                               LogMessageNormalizer logMessageNormalizer,
                               ExceptionInfoExtractor exceptionInfoExtractor,
-                              @Value("${app.analysis-job.progress-interval}") int progressInterval,
+                              @Value("${app.analysis-job.progress-interval-ms}") long analysisProgressIntervalMs,
                               @Value("${app.log-parsing.max-stack-trace-lines}") int maxStackTraceLines,
                               @Value("${app.log-parsing.max-log-line-length}") int maxLogLineLength,
                               @Value("${app.log-parsing.max-distinct-loggers}") int maxDistinctLoggers,
@@ -94,7 +95,7 @@ public class AnalysisJobRunner {
         this.sensitiveDataMasker = sensitiveDataMasker;
         this.logMessageNormalizer = logMessageNormalizer;
         this.exceptionInfoExtractor = exceptionInfoExtractor;
-        this.progressInterval = progressInterval;
+        this.analysisProgressIntervalMs = analysisProgressIntervalMs;
         this.maxStackTraceLines = maxStackTraceLines;
         this.maxLogLineLength = maxLogLineLength;
         this.maxDistinctLoggers = maxDistinctLoggers;
@@ -201,6 +202,7 @@ public class AnalysisJobRunner {
                          new InputStreamReader(countingStream, StandardCharsets.UTF_8))) {
 
                 String line;
+                Instant lastProgressCheck = Instant.now();
                 while ((line = reader.readLine()) != null) {
                     accumulator.incrementTotalLines();
 
@@ -210,7 +212,9 @@ public class AnalysisJobRunner {
                     consumeLine(line, stripResult, criAssembler, aggregator, selectedParser,
                             accumulator, timelineAggregator, filterCriteria);
 
-                    if (accumulator.getTotalLines() % progressInterval == 0) {
+                    Instant now = Instant.now();
+                    if (Duration.between(lastProgressCheck, now).toMillis() >= analysisProgressIntervalMs) {
+                        lastProgressCheck = now;
                         boolean checkpointSaved = false;
                         for (int attempt = 1; attempt <= 5 && !checkpointSaved; attempt++) {
                             try {
