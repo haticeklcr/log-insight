@@ -63,6 +63,9 @@ export default function JobDetailView({
       {job.resumedFromCheckpoint && (
         <p className={styles.resumedNote}>{t("jobDetail.resumedFromCheckpoint")}</p>
       )}
+      {!job.resumedFromCheckpoint && job.retryCount > 0 && (
+        <p className={styles.resumedNote}>{t("jobDetail.restartedFromScratch")}</p>
+      )}
 
       {pollingErrorMessage && <p className={styles.pollingWarning}>{pollingErrorMessage}</p>}
 

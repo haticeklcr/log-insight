@@ -53,6 +53,36 @@ describe("JobDetailView", () => {
     expect(screen.queryByText("Analiz kaldığı yerden devam ediyor")).not.toBeInTheDocument();
   });
 
+  it("retryCount > 0 ve resumedFromCheckpoint false olduğunda baştan başlatıldı notu gösterir", () => {
+    render(
+      <JobDetailView
+        job={sampleJob({ status: "RUNNING", retryCount: 1 })}
+        pollingErrorMessage={null}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onViewResult={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Analiz baştan başlatıldı")).toBeInTheDocument();
+  });
+
+  it("ilk çalıştırmada (retryCount 0) baştan başlatıldı notu gösterilmez", () => {
+    render(
+      <JobDetailView
+        job={sampleJob({ status: "RUNNING", retryCount: 0 })}
+        pollingErrorMessage={null}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onViewResult={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("Analiz baştan başlatıldı")).not.toBeInTheDocument();
+  });
+
   it("analiz adını ve durumu gösterir", () => {
     render(
       <JobDetailView

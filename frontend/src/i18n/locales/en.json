@@ -119,6 +119,7 @@
     "cancel": "Cancel",
     "retry": "Retry",
     "resumedFromCheckpoint": "Analysis is resuming from where it left off",
+    "restartedFromScratch": "Analysis was restarted from the beginning",
     "viewResult": "View Result",
     "seconds": "s",
     "minutes": "min"
