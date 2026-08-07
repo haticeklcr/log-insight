@@ -43,6 +43,17 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 - **Frontend: parçalı yükleme arayüzü** — dosya `File.slice()` ile belleğe alınmadan dilimleniyor, sunucudan bildirilen paralellikle eşzamanlı yükleniyor, başarısız parça üstel geri çekilmeyle tekrar deneniyor, iki ayrı ilerleme çubuğu (yükleme/birleştirme) ve yarım kalmış yükleme tespiti var
 - **26 yeni backend testi** (eşzamanlılık/yarış senaryoları dahil, gerçek thread'lerle), tümü V1-V6.1 testleriyle birlikte yeşil
 
+## V6.3 ile Eklenen Özellikler
+- **Zamana dayalı analiz ilerlemesi** — ilerleme/iptal kontrolü artık satır sayısına değil geçen süreye göre tetikleniyor (`ANALYSIS_PROGRESS_INTERVAL_MS`)
+- **Byte-offset farkındalı satır okuyucu** (`ByteOffsetLineReader`) — satır sonu araması ham bayt seviyesinde yapılıyor (UTF-8 çok baytlı karakterler güvenli), hem LF hem CRLF destekleniyor, belirli bir bayt konumundan okumaya devam edilebiliyor
+- **Analiz checkpoint'i** — devam eden bir analiz, periyodik olarak (`CHECKPOINT_INTERVAL_MS`) o ana kadarki tüm sayaçları ve son işlenen bayt konumunu veritabanına (`analysis_job_checkpoint`) kaydediyor
+- **Checkpoint'ten devam etme** — bir job retry edildiğinde, geçerli bir checkpoint varsa analiz kaldığı byte konumundan devam ediyor; sayaçlar sıfırdan değil checkpoint'teki değerlerden başlıyor
+- **Hata türüne duyarlı retry** — yalnızca geçici, konumdan bağımsız hatalar (`ANALYSIS_IO_ERROR`) checkpoint'i koruyor; dosyanın kalıcı olarak kaybolması (`ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE`) dahil diğer tüm hata türlerinde checkpoint silinip bir sonraki retry baştan başlıyor
+- **Arayüzde "kaldığı yerden devam ediyor" / "baştan başlatıldı" bilgisi** — Job Detay ekranında, son çalıştırmanın checkpoint'ten mi yoksa baştan mı başladığı gösteriliyor
+- **12 yeni backend testi, 4 yeni frontend testi**, tümü V1-V6.2 testleriyle birlikte yeşil
+
+**Bilinçli bir sınır:** Checkpoint, `MultilineExceptionAggregator`'ın (yarım kalmış çok satırlı exception grubu) ve `CriPartialRecordAssembler`'ın durumunu KAPSAMIYOR — bkz. [Bilinen Eksikler](#bilinen-eksikler).
+
 ## V4 ile Eklenen Özellikler
 - Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)
 - Her analiz için zorunlu bir **analiz adı** (3-100 karakter, trim edilir, dosya adından bağımsız)
@@ -373,7 +384,9 @@ backend/src/main/resources/db/changelog/
 ├── 022-create-upload-session-table.yaml # upload_session tablosu (V6.2)
 ├── 023-add-upload-session-indexes.yaml # status / expires_at index'leri (V6.2)
 ├── 024-add-upload-session-relation-to-analysis-job.yaml # analysis_job.upload_session_id + UNIQUE FK (V6.2)
-└── 025-add-version-to-upload-session.yaml # upload_session.version — optimistic locking (V6.2)
+├── 025-add-version-to-upload-session.yaml # upload_session.version — optimistic locking (V6.2)
+├── 026-create-analysis-job-checkpoint-table.yaml # analysis_job_checkpoint tablosu (V6.3)
+└── 027-add-resumed-from-checkpoint-to-analysis-job.yaml # analysis_job.resumed_from_checkpoint (V6.3)
 ```
 
 Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
@@ -480,7 +493,8 @@ Backend, `application.properties`'teki şu varsayılanlarla `localhost:5432`'ye 
 | `ANALYSIS_EXECUTOR_QUEUE_CAPACITY` | Backend | `50` | Thread havuzu dolduğunda bekleyebilecek maksimum iş sayısı. |
 | `ANALYSIS_EXECUTOR_THREAD_NAME_PREFIX` | Backend | `log-analysis-` | Oluşturulan thread'lerin isim öneki. |
 | `ANALYSIS_JOB_MAX_RETRY` | Backend | `3` | Bir job'ın maksimum retry sayısı. |
-| `ANALYSIS_JOB_PROGRESS_INTERVAL` | Backend | `100` | Progress/iptal kontrolünün kaç satırda bir yapılacağı. |
+| `ANALYSIS_PROGRESS_INTERVAL_MS` | Backend | `2000` | (V6.3) Progress/iptal kontrolünün en fazla kaç milisaniyede bir yapılacağı — artık satır sayısına değil geçen süreye dayalı. |
+| `CHECKPOINT_INTERVAL_MS` | Backend | `5000` | (V6.3) Analiz checkpoint'inin en fazla kaç milisaniyede bir kaydedileceği. |
 | `ANALYSIS_TEMP_DIRECTORY` | Backend | `/tmp/log-insight` | Yüklenen dosyaların analiz tamamlanana kadar saklandığı geçici klasör. |
 | `LOG_FORMAT_DETECTION_SAMPLE_SIZE` | Backend | `50` | (V5) Otomatik format algılamada okunacak örnek satır sayısı. |
 | `LOG_FORMAT_CONFIDENCE_THRESHOLD` | Backend | `60` | (V5) Format güven skoru bu değerin altındaysa PLAIN_TEXT'e düşülür. |
@@ -901,7 +915,19 @@ frontend/src/i18n/
 - Gerçek bir disk-dolu (507) senaryosu otomatik testlerle doğrulanmadı — ortam bağımlı, kararsız (flaky) bir test olacağı için bilinçli olarak atlandı; rezervasyon formülü kod incelemesiyle doğrulandı.
 - `uploadId` ile job oluşturma sırasında, oturum `CONSUMED`'a çekildikten HEMEN SONRA ama job veritabanı kaydı oluşturulmadan ÖNCE gerçekleşen (çok dar bir pencere) bir çökme durumunda, orijinal istek parametreleri (analiz adı, filtreler) kalıcı olmadığı için oturum güvenli şekilde otomatik kurtarılamaz — bu durumda oturum `UPLOAD_JOB_CREATION_INCOMPLETE` ile `FAILED` yapılır, kullanıcının dosyayı yeniden yüklemesi gerekir.
 
+**V6.3'e Özgü Bilinen Eksikler:**
+- Checkpoint, `MultilineExceptionAggregator`'ın (yarım kalmış çok satırlı exception grubu) ve `CriPartialRecordAssembler`'ın (CRI parça birleştirme) durumunu kapsamıyor — bir checkpoint tam bir çok satırlı exception'ın ORTASINDA alınmışsa, resume sonrası o exception'ın geri kalanı yanlışlıkla ayrı kayıtlar olarak sayılabilir.
+- `LogTimelineAggregator` (zaman çizelgesi) resume noktasından SIFIRDAN başlıyor — atlanan (checkpoint öncesi) kısmın zaman çizelgesi bucket'ları sonuçta hiç yer almıyor; yalnızca sayaçlar (toplam satır, hata sayısı vb.) doğru şekilde korunuyor.
+- Checkpoint alma sıklığı yalnızca ZAMANA dayalı — çok büyük ama çok hızlı işlenen bir dosyada (örn. basit, tek satırlık kayıtlar) `CHECKPOINT_INTERVAL_MS` süresi dolmadan analiz tamamen bitebilir, bu durumda checkpoint hiç oluşmaz (zararsız, sadece kullanılmamış bir optimizasyon).
+
 ## Karşılaşılan Sorunlar ve Çözümleri
+
+### V6.3'e Özgü Sorunlar
+
+- **Zamana dayalı ilerlemenin, satır-sayısı varsayımıyla yazılmış eski testleri kırması:** İlerleme kontrolünü satır sayısından (`%100==0`) geçen süreye çevirince, küçük/hızlı test dosyaları (5000 satır, birkaç milisaniyede biten) artık HİÇ ara kontrol noktasına uğramıyordu — bir testin iptal isteğini yetiştirememesine yol açtı. `@TestPropertySource` ile bu test sınıfı için aralığı 10ms'ye indirerek (production varsayılanı 2000ms'ye dokunmadan) çözüldü.
+- **Optimistic-lock hatasının, iki testte de farklı biçimlerde arka plan thread'i / ana thread yarışından kaynaklanması:** (1) Bir testin senkron olarak DÖNDÜRÜLEN nesne yerine veritabanından TEKRAR okuması, o sırada arka planda (dosyası olmadığı için hemen başarısız olan) asenkron `runAnalysis()` ile yarışa girdi — `retryJob()`'un döndürdüğü nesneyi kullanmaya geçilerek çözüldü. (2) Ayrı bir testte, elle `job.setId(...)` ile `@GeneratedValue` olan bir entity'ye ID atanması, Hibernate'in bunu var olan bir satırın güncellemesi sanmasına yol açtı (satır olmadığından hata) — `save()`'in ürettiği ID kullanılarak çözüldü.
+- **Test verisinde yanlış bayt-offset hesaplama:** Checkpoint'in resume noktasını bulmak için yazılan test yardımcı kodunda, `Line.getStartOffset()` (o satırın KENDİ başlangıcı) ile `reader.getCurrentPosition()` (bir SONRAKİ satırın başlangıcı) karıştırıldı — checkpoint yanlış satırdan kuruldu, sayaçlar bir satır çift sayıldı. Kanıt (beklenen 4, gelen 5) izlenerek doğru metoda geçilerek çözüldü.
+- **Kalıcı olarak kaybolmuş dosyanın "geçici I/O hatası" ile aynı kefeye konması:** İlk tasarımda tüm `IOException`'lar (genel disk hatası da, dosyanın hiç var olmaması da) `ANALYSIS_IO_ERROR` altında toplanıp "resumable" sayılıyordu — bu, kalıcı olarak silinmiş bir dosya için checkpoint'in sonsuza dek korunup her retry'nin aynı şekilde başarısız olacağı bir döngüye yol açabilirdi. `java.nio.file.NoSuchFileException`'ın genel `IOException`'dan ÖNCE, ayrı bir `catch` bloğuyla yakalanıp `ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE` (resumable olmayan) olarak sınıflandırılmasıyla düzeltildi — spec'in baştan sona kontrolü sırasında, kod zaten "çalışıyor" olmasına rağmen fark edilen mantıksal bir eksiklikti.
 
 ### V6.2'ye Özgü Sorunlar
 
@@ -1114,3 +1140,75 @@ frontend/src/i18n/
 - `@Transactional`'ın self-invocation sınırlaması ve bunun etrafından dolaşmanın (ayrı bean'e çıkarma) V4'teki `@Async` deneyiminden nasıl genellenebildiği
 - Kod değişikliklerini literal diff olarak vermenin (özetlemek yerine) neden kritik olduğu — bu dersin sert biçimde, gerçek derleme hatalarıyla öğrenildiği
 - Otomatik testlerin (ne kadar kapsamlı olursa olsun) gerçek, büyük ve çeşitli veriyle yapılan MANUEL testlerin yerini tutamayacağı — bu projede en az bir gerçek, kullanıcı tarafından bulunan eksiklik (timestamp ayrıştırma) sadece manuel UI testiyle ortaya çıktı
+
+---
+
+**V6.2'de yapay zekâdan hangi konularda destek alındığı:**
+- Parçalı yükleme protokolünün (oturum oluşturma, parça yükleme, durum sorgulama, tamamlama, iptal) tasarımı ve REST endpoint'lerinin spec ile birebir eşleştirilmesi
+- Atomik dosya işlemleri (benzersiz geçici dosya + `ATOMIC_MOVE`, hedef varsa başarısız olma) için kullanılan promptlar
+- Disk rezervasyon formülünün ve eşzamanlı oturum oluşturmanın (JVM-seviyesi `synchronized` blok) tasarımı
+- Kurtarma matrisinin, mevcut kod akışına (job satırının dosya taşımadan ÖNCE oluşturulması) göre yeniden yorumlanması
+- Tarayıcı tarafı dosya dilimleme (`File.slice()`, bellek almadan) için kullanılan promptlar
+
+**Parçalı yükleme protokolü için alınan destek:**
+- Spec'in önerdiği durum makinesi (`IN_PROGRESS → MERGING → COMPLETED → CONSUMED`) ve dizin yapısı (`{uploadId}/parts/{index}.part`, `data.log`) birebir uygulandı.
+
+**Atomik dosya işlemleri için kullanılan promptlar:**
+- "İlk yazan kazanır" davranışının POSIX `rename()`'in sessiz üzerine yazmasından farklı olarak `Files.move(..., ATOMIC_MOVE)` ile (hedef varsa `FileAlreadyExistsException` fırlatarak) nasıl sağlandığı üzerine.
+
+**Yarış senaryolarının tespiti için kullanılan promptlar:**
+- Gerçek `ExecutorService`/`CountDownLatch` kullanan testler istendi (varsayımla değil) — aynı parçanın eşzamanlı yüklenmesi, eşzamanlı `complete()`, aynı `uploadId` ile iki job oluşturma, eşzamanlı oturum oluşturma limiti.
+
+**Byte offset okuyucu için kullanılan promptlar:** V6.2 kapsamında henüz yok (V6.3'te ele alınacak).
+
+**Checkpoint tasarımı için kullanılan promptlar:** V6.2 kapsamında henüz yok (V6.3'te ele alınacak).
+
+**Tarayıcı tarafı dosya işleme için kullanılan promptlar:**
+- Dosyanın `File.slice()` ile (okuma tarayıcı isteği gönderirken gerçekleştiği için) hiç belleğe alınmadan dilimlenmesi; yarım kalmış yüklemenin `localStorage`'da `uploadId` + dosya kimliği (ad/boyut/`lastModified`) ile hatırlanması ve yeniden seçilen dosyanın bunlarla karşılaştırılması.
+
+**Yapay zekânın ürettiği eşzamanlılık kodunun nasıl test edildiği:**
+- `UploadConcurrencyTest` — 7 senaryo, hepsi gerçek thread havuzları (`ExecutorService`, `CountDownLatch`) ile; varsayımsal/simüle değil.
+- Birleştirilen dosyanın kaynakla bayt bayt aynı olduğu (`UploadMergeCorrectnessTest`), gerçek çok parçalı rastgele veriyle doğrulandı.
+
+**Yapay zekânın ürettiği kodlarda yapılan manuel değişiklikler:**
+- Yok — tüm düzeltmeler kullanıcının gerçek derleme/test çıktısını paylaşması üzerine yapay zeka tarafından yapıldı.
+
+**Reddedilen veya hatalı bulunan öneriler:**
+- Spec'in kurtarma matrisi tablosunun literal adım sırası (CONSUMED → dosya taşı → job kaydı oluştur), job'ın hedef dosya adını bilebilmesi için ID'nin önceden üretilip Hibernate'e "bunu kullan" denmesini gerektiriyordu — bu, `@GeneratedValue(strategy = GenerationType.UUID)` ile garantili çalışıp çalışmayacağı doğrulanamayan riskli bir varsayım olduğu için reddedildi; bunun yerine mevcut, kanıtlanmış sıra (job kaydı önce, ID Hibernate'den) kullanılıp kurtarma matrisi bu gerçek akışa göre yeniden yorumlandı.
+
+**V6.2 sırasında öğrenilen konular:**
+- `JpaRepository.save()`'in `UPDATE`'i commit'e kadar erteleyebilmesi ve bunun optimistic-lock hata yakalamayı nasıl etkilediği (`saveAndFlush()` ihtiyacı)
+- Bir REST kaynağının (upload session) durumunu veritabanında değil dosya sisteminde tutmanın ("tek doğruluk kaynağı") ne zaman doğru tasarım kararı olduğu
+- Disk rezervasyon hesaplarının neden "artan" değil "azalan" bir taahhüt olarak modellenmesi gerektiği
+- Bir test senaryosunun (farklı boyutlu parça tekrarı) hangi katmanın SORUMLULUĞU olduğunu anlamadan yazılırsa, o katmanın doğru tasarımı yüzünden testin kendisinin imkânsız hâle gelebileceği
+- `ApplicationContext failure threshold` gibi kitlesel test hatalarında panik yapıp kod aramadan önce, hatanın "hangi testler etkilendi" desenine bakarak ortam mı kod mu ayrımını yapmanın değeri
+
+---
+
+**V6.3'te yapay zekâdan hangi konularda destek alındığı:**
+- Byte-offset farkındalı satır okuyucunun, UTF-8 çok baytlı karakterleri karakter değil HAM BAYT seviyesinde ele alarak (`0x0A`'nın hiçbir UTF-8 çok baytlı dizinin parçası olamayacağı gerçeğinden faydalanarak) tasarlanması
+- Checkpoint snapshot yapısının (hangi durumun dahil edilip hangisinin bilinçli olarak dışarıda bırakılacağının) kapsam kararı
+- Hata türüne duyarlı retry politikasının (hangi errorCode'ların "resumable" sayılacağının) tasarımı
+- `AnalysisResultAccumulator`'a geri yükleme (restore) constructor'ının eklenmesi — özel, iç içe `ErrorGroup` tipinin iki ayrı düz map'ten (`normalizedErrorSampleMessages`/`normalizedErrorCounts`) yeniden kurulması
+
+**Checkpoint/byte-offset promptları için alınan destek:**
+- Spec'in "checkpoint'ten devam etme" akışının, mevcut kod tabanındaki GERÇEK sıraya (job kaydı dosya taşımadan önce oluşturuluyor) göre yeniden yorumlanması; spec'in literal adım sırasının neden (ID'nin önceden üretilmesini gerektirdiği için) izlenmediğinin gerekçelendirilmesi.
+
+**Zamana dayalı ilerleme promptları için alınan destek:**
+- Var olan satır-sayısı-tabanlı ilerleme/iptal kontrol bloğunun, aynı yapı korunarak (iptal kontrolü aynı `if` bloğunda kalacak şekilde) zamana dayalı hale getirilmesi.
+
+**Yapay zekânın ürettiği kodlarda yapılan manuel değişiklikler:**
+- Yok — tüm düzeltmeler kullanıcının gerçek derleme/test çıktısını paylaşması üzerine yapay zeka tarafından yapıldı.
+
+**Reddedilen veya hatalı bulunan öneriler:**
+- Yok bu fazda — ama kendi kendine bir düzeltme oldu: kalıcı olarak kaybolmuş dosyanın genel I/O hatasından ayrı sınıflandırılması, kullanıcıdan gelen bir hata raporu üzerine DEĞİL, spec'in son satır satır kontrolü sırasında kodun kendi mantığı gözden geçirilirken fark edildi.
+
+**Yapay zekânın ürettiği eşzamanlılık/zamanlama kodunun nasıl test edildiği:**
+- Checkpoint'in gerçek bir uygulama çökmesi + yeniden başlatma senaryosunu (`StartupRecoveryService` + gerçek retry) uçtan uca simüle eden bir testle doğrulanması — yalnızca "checkpoint kaydediliyor" değil, "gerçekten kullanılıyor" kanıtlandı.
+- Gerçek bir I/O hatasının, zamanlamaya bağlı bir simülasyon yerine dosya yolunda bir DİZİN oluşturarak (kesin, tekrarlanabilir bir `IOException` üreterek) test edilmesi.
+
+**V6.3 sırasında öğrenilen konular:**
+- UTF-8'in kendi tasarımının (ASCII uyumluluğu, `0x0A`'nın asla çok baytlı bir dizinin parçası olmaması), bayt-seviyeli satır ayrıştırmayı nasıl güvenli hale getirdiği
+- Bir "devam etme" mekanizmasının hangi durumu KORUYUP hangisini bilinçli olarak dışarıda bırakacağının, tam bir yeniden oluşturmadan daha az riskli ve daha anlaşılır bir tasarım kararı olabileceği
+- Zamana dayalı bir mekanizmaya geçişin, "satır sayısı sabit/öngörülebilir" varsayımıyla yazılmış testleri nasıl kırılgan hale getirebileceği
+- Bir hatanın "resumable" olup olmadığının, hatanın KENDİSİNDEN çok NEDENİNİN kalıcı mı geçici mi olduğuna bakılarak sınıflandırılması gerektiği
