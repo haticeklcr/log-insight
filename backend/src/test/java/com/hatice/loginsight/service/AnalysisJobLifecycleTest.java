@@ -308,14 +308,14 @@ class AnalysisJobLifecycleTest extends AbstractIntegrationTest {
         job.setCancelRequested(false);
         AnalysisJobEntity saved = analysisJobRepository.save(job);
 
-        // Dosya diskte hiç yok (hiç store edilmedi) — analiz sırasında IOException
+        // Dosya diskte hiç yok (hiç store edilmedi) — analiz sırasında NoSuchFileException
         // fırlaması bekleniyor, bu da gerçek bir "RUNNING -> FAILED" senaryosu.
         analysisJobRunner.runAnalysis(saved.getId());
 
         AnalysisJobEntity failed = awaitStatus(saved.getId(), JobStatus.FAILED);
 
         assertThat(failed.getStatus()).isEqualTo(JobStatus.FAILED);
-        assertThat(failed.getErrorCode()).isEqualTo("ANALYSIS_IO_ERROR");
+        assertThat(failed.getErrorCode()).isEqualTo("ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE");
         assertThat(failed.getAnalysisId()).isNull();
         assertThat(logAnalysisRepository.count()).isZero();
     }

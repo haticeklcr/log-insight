@@ -284,6 +284,9 @@ public class AnalysisJobRunner {
 
             handleSuccess(job, accumulator, timelineAggregator, selectedFormat, detectedEnvelope, formatConfidence, sampleSize, matchedSampleCount);
 
+        } catch (java.nio.file.NoSuchFileException e) {
+            handleFailure(job, "ANALYSIS_SOURCE_FILE_NO_LONGER_AVAILABLE",
+                    "Analiz kaynagi dosya artik mevcut degil");
         } catch (IOException e) {
             handleFailure(job, "ANALYSIS_IO_ERROR", "Log dosyasi okunurken bir hata olustu: " + e.getMessage());
         } catch (Exception e) {
