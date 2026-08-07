@@ -42,6 +42,34 @@ public class AnalysisResultAccumulator {
         this.maxDistinctErrorGroups = maxDistinctErrorGroups;
     }
 
+    public AnalysisResultAccumulator(int maxDistinctLoggers, int maxDistinctErrorGroups,
+                                      AnalysisCheckpointSnapshot snapshot) {
+        this(maxDistinctLoggers, maxDistinctErrorGroups);
+        this.totalLines = snapshot.getTotalLines();
+        this.parsedEntryCount = snapshot.getParsedEntryCount();
+        this.unparsedLineCount = snapshot.getUnparsedLineCount();
+        this.infoCount = snapshot.getInfoCount();
+        this.warningCount = snapshot.getWarningCount();
+        this.errorCount = snapshot.getErrorCount();
+        this.exceptionCount = snapshot.getExceptionCount();
+        this.multilineExceptionCount = snapshot.getMultilineExceptionCount();
+        this.timestampPresentCount = snapshot.getTimestampPresentCount();
+        this.levelPresentCount = snapshot.getLevelPresentCount();
+        this.messagePresentCount = snapshot.getMessagePresentCount();
+        this.firstLogTimestamp = snapshot.getFirstLogTimestamp();
+        this.lastLogTimestamp = snapshot.getLastLogTimestamp();
+        this.loggerCounts.putAll(snapshot.getLoggerCounts());
+        this.threadCounts.putAll(snapshot.getThreadCounts());
+        this.statusCodeCounts.putAll(snapshot.getStatusCodeCounts());
+        this.httpMethodCounts.putAll(snapshot.getHttpMethodCounts());
+        snapshot.getNormalizedErrorCounts().forEach((normalizedMessage, count) -> {
+            ErrorGroup group = new ErrorGroup();
+            group.count = count;
+            group.sampleRawMessage = snapshot.getNormalizedErrorSampleMessages().get(normalizedMessage);
+            this.normalizedErrorGroups.put(normalizedMessage, group);
+        });
+    }
+
     public void incrementTotalLines() {
         totalLines++;
     }

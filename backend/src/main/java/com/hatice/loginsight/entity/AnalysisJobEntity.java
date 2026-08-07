@@ -64,6 +64,9 @@ public class AnalysisJobEntity {
     @Column(name = "cancel_requested", nullable = false)
     private boolean cancelRequested;
 
+    @Column(name = "resumed_from_checkpoint", nullable = false)
+    private boolean resumedFromCheckpoint;
+
     @Column(name = "requested_parser_type", length = 30)
     private String requestedParserType;
 
@@ -225,6 +228,14 @@ public class AnalysisJobEntity {
 
     public void setCancelRequested(boolean cancelRequested) {
         this.cancelRequested = cancelRequested;
+    }
+
+    public boolean isResumedFromCheckpoint() {
+        return resumedFromCheckpoint;
+    }
+
+    public void setResumedFromCheckpoint(boolean resumedFromCheckpoint) {
+        this.resumedFromCheckpoint = resumedFromCheckpoint;
     }
 
     public long getVersion() {

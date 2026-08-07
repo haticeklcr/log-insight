@@ -51,3 +51,5 @@ databaseChangeLog:
       file: db/changelog/025-add-version-to-upload-session.yaml
   - include:
       file: db/changelog/026-create-analysis-job-checkpoint-table.yaml
+  - include:
+      file: db/changelog/027-add-resumed-from-checkpoint-to-analysis-job.yaml

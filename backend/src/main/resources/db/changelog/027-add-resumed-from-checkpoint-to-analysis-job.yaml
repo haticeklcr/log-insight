@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 027-add-resumed-from-checkpoint-to-analysis-job
+      author: hatice
+      changes:
+        - addColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: resumed_from_checkpoint
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: analysis_job
+            columns:
+              - column:
+                  name: resumed_from_checkpoint

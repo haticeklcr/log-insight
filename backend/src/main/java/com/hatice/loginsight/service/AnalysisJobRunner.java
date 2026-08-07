@@ -40,12 +40,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class AnalysisJobRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AnalysisJobRunner.class);
+
+    // Yalnızca geçici, konuma bağlı olmayan hatalar checkpoint'i kalıcı sayar — dosyanın
+    // kendisiyle veya seçimlerle ilgili hatalar (format/parser uyumsuzluğu, filtre
+    // uyumsuzluğu, çok fazla parse edilemeyen satır, beklenmeyen hatalar) yeniden
+    // denemede AYNI şekilde başarısız olacağı için checkpoint'ten devam etmenin bir
+    // faydası yok — bu durumlarda checkpoint siliniyor, bir sonraki retry baştan başlıyor.
+    private static final Set<String> RESUMABLE_ERROR_CODES = Set.of("ANALYSIS_IO_ERROR");
 
     private final AnalysisJobRepository analysisJobRepository;
     private final AnalysisResultPersister analysisResultPersister;
@@ -194,13 +202,24 @@ public class AnalysisJobRunner {
             JobFilterCriteria filterCriteria = JobFilterCriteria.from(job);
 
             long totalBytes = Files.size(filePath);
-            AnalysisResultAccumulator accumulator = new AnalysisResultAccumulator(maxDistinctLoggers, maxDistinctErrorGroups);
+            Optional<AnalysisCheckpointService.CheckpointData> checkpoint = analysisCheckpointService.loadCheckpoint(jobId);
+            long resumeByteOffset = 0L;
+            AnalysisResultAccumulator accumulator;
+            if (checkpoint.isPresent()) {
+                resumeByteOffset = checkpoint.get().byteOffset();
+                accumulator = new AnalysisResultAccumulator(maxDistinctLoggers, maxDistinctErrorGroups,
+                        checkpoint.get().snapshot());
+                job.setResumedFromCheckpoint(true);
+                job = analysisJobRepository.save(job);
+            } else {
+                accumulator = new AnalysisResultAccumulator(maxDistinctLoggers, maxDistinctErrorGroups);
+            }
             LogTimelineAggregator timelineAggregator = new LogTimelineAggregator(maxTimelineBuckets);
             MultilineExceptionAggregator aggregator = new MultilineExceptionAggregator(selectedParser, maxStackTraceLines);
             CriPartialRecordAssembler criAssembler = detectedEnvelope == LogEnvelope.CONTAINER_CRI
                     ? new CriPartialRecordAssembler(maxLogLineLength) : null;
 
-            try (ByteOffsetLineReader reader = new ByteOffsetLineReader(filePath)) {
+            try (ByteOffsetLineReader reader = new ByteOffsetLineReader(filePath, resumeByteOffset)) {
 
                 ByteOffsetLineReader.Line rawLine;
                 Instant lastProgressCheck = Instant.now();
@@ -404,6 +423,10 @@ public class AnalysisJobRunner {
         job.setErrorCode(errorCode);
         job.setErrorMessage(errorMessage);
         analysisJobRepository.save(job);
+
+        if (!RESUMABLE_ERROR_CODES.contains(errorCode)) {
+            analysisCheckpointService.deleteCheckpoint(job.getId());
+        }
     }
 
     private void handleCancellation(AnalysisJobEntity job) {
