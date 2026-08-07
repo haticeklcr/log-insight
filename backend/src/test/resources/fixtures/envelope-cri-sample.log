@@ -1,0 +1,4 @@
+2026-07-30T06:55:07.700Z stdout F 2026-07-30 06:55:07.700 INFO 1 --- [main] com.example.PaymentService : Odeme baslatildi
+2026-07-30T06:55:08.100Z stdout P 2026-07-30 06:55:08.104 ERROR 1 --- [main] com.example.PaymentService : Odeme basar
+2026-07-30T06:55:08.102Z stdout F isiz: java.lang.IllegalStateException: pool bos
+2026-07-30T06:55:09.000Z stderr F 2026-07-30 06:55:09.000 WARN 1 --- [main] com.example.PaymentService : Yeniden deneniyor

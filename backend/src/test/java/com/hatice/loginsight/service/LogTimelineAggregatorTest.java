@@ -51,4 +51,25 @@ class LogTimelineAggregatorTest {
         assertEquals(5, totalRecorded);
         assertTrue(entities.size() <= 3, "Saatlik birlestirme sonrasi bucket sayisi limiti asmamali");
     }
+
+    @Test
+    void escalatesThroughMultipleTiersWhenGapIsWideEnough() {
+        LogTimelineAggregator aggregator = new LogTimelineAggregator(1);
+
+        aggregator.record(Instant.parse("2026-01-01T00:00:00Z"), "INFO", false);
+        aggregator.record(Instant.parse("2026-03-01T00:00:00Z"), "INFO", false);
+
+        aggregator.toEntities(1L);
+
+        assertEquals("WEEK", aggregator.getGranularityName());
+    }
+
+    @Test
+    void granularityNameStartsAsMinute() {
+        LogTimelineAggregator aggregator = new LogTimelineAggregator(500);
+
+        aggregator.record(Instant.parse("2026-01-01T10:00:05Z"), "INFO", false);
+
+        assertEquals("MINUTE", aggregator.getGranularityName());
+    }
 }

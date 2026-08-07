@@ -51,6 +51,20 @@ class ExceptionInfoExtractorTest {
     }
 
     @Test
+    void detectsExceptionClassNameInTheMiddleOfTheMessage() {
+        LogRecordGroup group = new LogRecordGroup(
+                "2026-01-01 12:30:30.000 ERROR 1 --- [main] c.e.Service : "
+                        + "Odeme basarisiz: java.lang.IllegalStateException: pool bos",
+                List.of(),
+                false);
+
+        MultilineExceptionInfo info = extractor.extract(group);
+
+        assertNotNull(info);
+        assertEquals("java.lang.IllegalStateException", info.getExceptionType());
+    }
+
+    @Test
     void returnsNullWhenNoExceptionPresent() {
         LogRecordGroup group = new LogRecordGroup(
                 "2026-01-01 12:30:30.000 INFO 1 --- [main] c.e.Service : everything is fine",

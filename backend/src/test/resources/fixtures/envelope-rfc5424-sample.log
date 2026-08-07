@@ -1,0 +1,4 @@
+<134>1 2026-07-30T06:55:07.702+03:00 dc05 java 2172 - - 2026-07-30 06:55:07.702 INFO 2172 --- [main] com.example.PaymentService : Odeme baslatildi
+<134>1 2026-07-30T06:55:08.104+03:00 dc05 java 2172 - - 2026-07-30 06:55:08.104 ERROR 2172 --- [main] com.example.PaymentService : Odeme basarisiz: java.lang.IllegalStateException: pool bos
+<134>1 2026-07-30T06:55:08.150+03:00 dc05 java 2172 - - 	at com.example.PaymentService.process(PaymentService.java:45)
+<134>1 2026-07-30T06:55:09.500+03:00 dc05 java 2172 - - 2026-07-30 06:55:09.500 INFO 2172 --- [main] com.example.PaymentService : Odeme tamamlandi
