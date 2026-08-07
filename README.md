@@ -30,6 +30,19 @@ Kullanıcının yüklediği `.log` veya `.txt` uzantılı uygulama loglarını a
 - **`detectedEnvelope` ve `timelineGranularity`'nin arayüzde gösterilmesi** — Analiz Detay ekranında "Algılanan Envelope" kartı ve zaman çizelgesi kademesi notu
 - **34 yeni backend testi, 4 yeni frontend testi**, tümü V1-V5 testleriyle birlikte yeşil
 
+## V6.2 ile Eklenen Özellikler
+- **Dosya boyutu sınırının kaldırılması** — parçalı (chunked) yükleme ile artık uygulamanın tek sınırı sunucudaki disk alanı; doğrudan multipart yükleme yolu (küçük dosyalar için) korunuyor
+- **Atomik parça yazma** — her parça benzersiz bir geçici dosyaya yazılıp atomik olarak yerine konuyor; aynı parça tekrar gönderilirse (aynı boyut → sessizce 204, farklı boyut → 409) veri bozulmuyor
+- **Dosya sistemi tek doğruluk kaynağı** — hangi parçaların yüklendiği veritabanında DEĞİL, disk üzerinden hesaplanıyor; yarım kalmış bir yükleme kaldığı yerden devam edebiliyor
+- **Asenkron, streaming birleştirme** — parçalar arka planda, sabit bellekle (dosya boyutundan bağımsız) tek dosyada birleştiriliyor; çıktı atomik olarak yerine konuyor, ilerleme zamana dayalı güncelleniyor
+- **Disk alanı rezervasyonu ve eşzamanlı oturum sınırı** — yeni bir yükleme oturumu açılmadan önce disk kontrolü yapılıyor, rezervasyon yüklenen byte arttıkça azalıyor, eşzamanlı oturum oluşturma istekleri serileştiriliyor
+- **`uploadId` ile analiz job'ı oluşturma** — birleştirilmiş dosya analiz dizinine KOPYALANMADAN taşınıyor; aynı `uploadId` ile ikinci bir job oluşturulamıyor (veritabanı seviyesinde `UNIQUE` constraint + optimistic lock)
+- **Kurtarma matrisi** — uygulama yeniden başladığında yarım kalmış birleştirmeler yeniden deneniyor, sahibi bulunamayan `CONSUMED` oturumlar ve kaynak dosyası kaybolmuş job'lar anlamlı bir hata koduyla `FAILED` yapılıyor
+- **Zamanlanmış temizlik görevi** — süresi dolmuş oturumlar, sahipsiz yükleme dizinleri ve kalıntı birleştirme geçici dosyaları periyodik olarak temizleniyor; aktif bir yükleme asla silinmiyor
+- **Kalıcı depolama** — yükleme ve analiz geçici dizinleri aynı named volume altında (`log-insight-file-data`), `docker compose down/up` sonrası korunuyor
+- **Frontend: parçalı yükleme arayüzü** — dosya `File.slice()` ile belleğe alınmadan dilimleniyor, sunucudan bildirilen paralellikle eşzamanlı yükleniyor, başarısız parça üstel geri çekilmeyle tekrar deneniyor, iki ayrı ilerleme çubuğu (yükleme/birleştirme) ve yarım kalmış yükleme tespiti var
+- **26 yeni backend testi** (eşzamanlılık/yarış senaryoları dahil, gerçek thread'lerle), tümü V1-V6.1 testleriyle birlikte yeşil
+
 ## V4 ile Eklenen Özellikler
 - Log analizinin arka planda çalışan asenkron bir **job** olarak yürütülmesi (kullanıcı isteği hemen `PENDING` durumunda bir job ID'siyle cevap alır, gerçek analiz ayrı bir thread havuzunda ilerler)
 - Her analiz için zorunlu bir **analiz adı** (3-100 karakter, trim edilir, dosya adından bağımsız)
@@ -356,7 +369,11 @@ backend/src/main/resources/db/changelog/
 ├── 018-add-detected-envelope-to-analysis-job.yaml # analysis_job.detected_envelope (V6.1)
 ├── 019-add-detected-envelope-to-log-analysis.yaml # log_analysis.detected_envelope (V6.1)
 ├── 020-add-timeline-granularity-to-log-analysis.yaml # log_analysis.timeline_granularity (V6.1)
-└── 021-widen-analysis-counters-to-bigint.yaml # tüm sayaç kolonlarını BIGINT'e genişletir (V6.1)
+├── 021-widen-analysis-counters-to-bigint.yaml # tüm sayaç kolonlarını BIGINT'e genişletir (V6.1)
+├── 022-create-upload-session-table.yaml # upload_session tablosu (V6.2)
+├── 023-add-upload-session-indexes.yaml # status / expires_at index'leri (V6.2)
+├── 024-add-upload-session-relation-to-analysis-job.yaml # analysis_job.upload_session_id + UNIQUE FK (V6.2)
+└── 025-add-version-to-upload-session.yaml # upload_session.version — optimistic locking (V6.2)
 ```
 
 Her changeSet için bir `rollback` bloğu tanımlıdır. `spring.jpa.hibernate.ddl-auto=validate` olarak ayarlanmıştır — Hibernate hiçbir zaman şema oluşturmaz, sadece entity'lerin Liquibase tarafından oluşturulan şemayla eşleştiğini doğrular. Uygulama her başlatıldığında Liquibase, henüz uygulanmamış migration'ları otomatik olarak çalıştırır.
@@ -476,6 +493,16 @@ Backend, `application.properties`'teki şu varsayılanlarla `localhost:5432`'ye 
 | `ENVELOPE_DETECTION_ENABLED` | Backend | `true` | (V6.1) Envelope (toplayıcı öneki) tespitinin açık/kapalı olması. |
 | `ENVELOPE_DETECTION_CONFIDENCE_THRESHOLD` | Backend | `80` | (V6.1) Bu değerin altında kalan envelope tespiti uygulanmaz, dosya değiştirilmeden işlenir. |
 | `LOG_FORMAT_DETECTION_MAX_SAMPLE_SIZE` | Backend | `2000` | (V6.1) Format örneklemesi için (devam satırı olmayan yeterli satır bulana kadar) taranacak maksimum ham satır sayısı. |
+| `UPLOAD_DIRECTORY` | Backend | `/tmp/log-insight-uploads` | (V6.2) Parçalı yükleme oturumlarının saklandığı dizin. Docker'da `/data/log-insight/uploads`. |
+| `UPLOAD_CHUNK_SIZE` | Backend | `8MB` | (V6.2) Bir parçanın boyutu; sunucu tarafından belirlenip istemciye bildirilir, frontend'e sabit yazılmaz. |
+| `UPLOAD_SESSION_TTL` | Backend | `24h` | (V6.2) Bir yükleme oturumunun ne kadar süre sonra süresi dolmuş sayılacağı. |
+| `UPLOAD_PARALLELISM` | Backend | `4` | (V6.2) İstemcinin eşzamanlı gönderebileceği önerilen parça sayısı. |
+| `UPLOAD_MAX_FILE_SIZE` | Backend | *(boş = sınırsız)* | (V6.2) Parçalı yükleme yolunda isteğe bağlı üst sınır; boş/`0` sınırsız anlamına gelir. |
+| `UPLOAD_MAX_ACTIVE_SESSIONS` | Backend | `5` | (V6.2) Aynı anda kaç aktif yükleme oturumuna izin verileceği. |
+| `UPLOAD_DISK_RESERVE` | Backend | `5GB` | (V6.2) Disk kontrolünde her zaman boş bırakılması istenen ek pay. |
+| `MERGE_PROGRESS_INTERVAL_MS` | Backend | `2000` | (V6.2) Birleştirme ilerlemesinin en fazla ne sıklıkla veritabanına yazılacağı. |
+| `MERGE_EXECUTOR_CORE_POOL_SIZE` / `MERGE_EXECUTOR_MAX_POOL_SIZE` / `MERGE_EXECUTOR_QUEUE_CAPACITY` / `MERGE_EXECUTOR_THREAD_NAME_PREFIX` | Backend | `2` / `4` / `50` / `upload-merge-` | (V6.2) Asenkron birleştirme için ayrı thread havuzu — analiz thread havuzundan bağımsız. |
+| `CLEANUP_JOB_INTERVAL` | Backend | `3600000` | (V6.2) Zamanlanmış temizlik görevinin milisaniye cinsinden çalışma sıklığı. |
 
 `.env.example` dosyası (proje kökünde), gerçek değerler olmadan hangi değişkenlerin gerektiğini gösterir; gerçek `.env` dosyası `.gitignore` ile git'e dahil edilmez.
 
@@ -707,6 +734,18 @@ V6.1 ile eklenen test senaryoları (34 yeni test):
 
 Envelope biçimlerinin her biri için ayrı bir fixture dosyası bulunur; `envelope-real-world-sample.log`, elle yazılmamış, gerçek bir sistemden (`journalctl -o short`, WSL sistem journal'ı) alınmış çıktıdır — hassas veri içermediği için maskeleme gerekmedi.
 
+V6.2 ile eklenen test senaryoları (26 yeni test):
+- Yükleme oturumu oluşturma, geçersiz uzantı/boyut reddi
+- Parça yükleme: geçersiz indeks/boyut reddi, aynı boyutta tekrarda 204 + dosya değişmemesi, farklı boyutta tekrarda 409 (depolama katmanı seviyesinde, gerçek sözleşmenin sahibi orada olduğu için)
+- Süresi dolmuş oturumda parça yüklemenin reddedilmesi
+- Eksik parça listesinin dosya sisteminden doğru hesaplanması (tek ve çok parçalı senaryolar)
+- Eksik parçayla tamamlama isteğinin reddedilmesi, oturum iptalinin kaydı silmesi
+- Birleştirilen dosyanın kaynakla bayt bayt aynı olması (çok parçalı, rastgele veriyle)
+- `file`/`uploadId` alanlarından hiçbiri ya da ikisi birden gönderildiğinde `400`; var olmayan `uploadId` için `404`
+- Süresi dolmuş/tamamlanmamış oturumların ve aktif olmayan sahipsiz dizinlerin temizlenmesi; aktif bir yüklemenin temizlik görevinden etkilenmemesi
+- Kurtarma matrisi: `MERGING` + parçalar mevcutken yeniden birleştirme; sahipsiz `CONSUMED` oturumun anlamlı bir hata koduyla `FAILED` yapılması
+- Eşzamanlılık (gerçek `ExecutorService`/`CountDownLatch` ile): aynı parçanın iki kez yüklenmesi, `complete()`'in iki kez çağrılması, aynı `uploadId` ile iki job oluşturulması, eşzamanlı oturum oluşturmanın aktif oturum limitini aşamaması
+
 ### Testcontainers Testlerinin Çalıştırılması
 
 Veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker container'ında (Testcontainers ile) başlatarak çalışır — mock veya in-memory veritabanı kullanılmaz. Container, `AbstractIntegrationTest`'te "singleton container" deseniyle (JVM başına bir kez, elle) başlatılır ve tüm test sınıfları arasında paylaşılır. Bunun için Docker Desktop (ya da WSL2 üzerinde Docker) çalışır durumda olmalı; başka hiçbir manuel adım gerekmez.
@@ -717,6 +756,7 @@ Veritabanı testleri, gerçek bir PostgreSQL örneğini geçici bir Docker conta
 cd frontend
 npm test
 ```
+V6.2 ile eklenen frontend test senaryoları (`NewAnalysisFlow.test.tsx` güncellendi): analiz job'ının artık `createUploadSession → uploadChunk → completeUpload → (getUploadStatus polling) → createAnalysisJobFromUpload` zinciriyle oluşturulduğunun, isim/parser/filtre değerlerinin doğru iletildiğinin ve backend hatasının doğru gösterildiğinin doğrulanması.
 
 V1/V2/V3'ten gelen tüm testler korunmuştur. V4 ile eklenen senaryolar:
 - Analiz adı girilerek job oluşturma akışı, analiz adı boş/kısa/uzun bırakıldığında validation mesajı gösterilmesi, adın trim edilerek gönderilmesi
@@ -855,7 +895,19 @@ frontend/src/i18n/
 - Envelope sınıflandırması sezgiseldir, kesin değildir — toplayıcı önekleri birbirine çok benzeyebilir, güven eşiği altında kalan durumlarda dosya değiştirilmeden (düz metin gibi) işlenir.
 - CRI parça birleştirmede içerik bütünlüğü (checksum) doğrulaması yok — bu V6 kapsamı dışında bırakıldı, sadece parça sırası ve stream ayrımı garanti ediliyor.
 
+**V6.2'ye Özgü Bilinen Eksikler:**
+- Parça içeriğinin bütünlüğü doğrulanmıyor (checksum/hash yok) — spec'in kendi belirttiği bir sınır; aynı indekse, aynı boyutta ama farklı içerikle gelen ikinci bir istek tespit edilemez, ilk başarıyla tamamlanan parça korunur.
+- Uygulama **TEK backend instance** varsayımıyla çalışır — dosyalar yerel diskte tutulduğu için birden fazla replica çalıştırılırsa bir replica'ya yüklenen parçalar diğerinden görünmez. Birden fazla replica desteği (dağıtık depolama/koordinasyon) V6 kapsamı dışında.
+- Gerçek bir disk-dolu (507) senaryosu otomatik testlerle doğrulanmadı — ortam bağımlı, kararsız (flaky) bir test olacağı için bilinçli olarak atlandı; rezervasyon formülü kod incelemesiyle doğrulandı.
+- `uploadId` ile job oluşturma sırasında, oturum `CONSUMED`'a çekildikten HEMEN SONRA ama job veritabanı kaydı oluşturulmadan ÖNCE gerçekleşen (çok dar bir pencere) bir çökme durumunda, orijinal istek parametreleri (analiz adı, filtreler) kalıcı olmadığı için oturum güvenli şekilde otomatik kurtarılamaz — bu durumda oturum `UPLOAD_JOB_CREATION_INCOMPLETE` ile `FAILED` yapılır, kullanıcının dosyayı yeniden yüklemesi gerekir.
+
 ## Karşılaşılan Sorunlar ve Çözümleri
+
+### V6.2'ye Özgü Sorunlar
+
+- **Optimistic lock hatasının `try/catch` bloğunun dışında patlaması:** `UploadSessionEntity`'ye eklenen `@Version` alanının, eşzamanlı `complete()`/`consumeCompletedSession()` çağrılarından birini 409 ile reddetmesi bekleniyordu; ama `JpaRepository.save()` gerçek `UPDATE` SQL'ini transaction commit'ine kadar erteliyor, yani hata benim yakalamaya çalıştığım `try/catch`'in TAMAMEN dışında, proxy'nin commit aşamasında fırlıyordu — gerçek bir eşzamanlılık testi (`UploadConcurrencyTest`) bunu ortaya çıkardı. `save()` yerine `saveAndFlush()` kullanılarak (UPDATE'i hemen çalıştırıp hatayı doğru yerde yakalayarak) çözüldü.
+- **Test tasarımı hatası — servis katmanından tetiklenemeyen bir senaryo:** "Farklı boyutta parça tekrar yüklenirse 409 dönmeli" testini `UploadSessionService.uploadChunk()` üzerinden yazmaya çalıştım, ama bu metot zaten her chunk index için TEK bir beklenen boyut talep ediyor — servis katmanından bu senaryoyu hiç tetiklemek mümkün değil (bu doğru bir davranış). Test, asıl sözleşmenin sahibi olan `ChunkedUploadStorageService.writePart()`'ı doğrudan çağıracak şekilde düzeltildi.
+- **`ApplicationContext failure threshold exceeded` hatasıyla aynı anda ~90 testin başarısız görünmesi:** Bununla hiç ilgisi olmayan, önceden var olan testler (`LogAnalysisControllerTest`, `LiquibaseMigrationTest` vb.) dahil TÜM Spring context testleri aynı anda kırmızıya düştü. Kanıt (yalnızca Spring context gerektiren testlerin etkilenmesi, saf unit testlerin etkilenmemesi) izlenerek bunun kod değil, paylaşılan Testcontainers Postgres container'ının ilk başlatılışında geçici bir Docker/WSL2 sorunu olduğu teşhis edildi — `docker ps` ile Docker Desktop'ın hazır olduğu doğrulanıp testler tekrar çalıştırılarak (kod hiç değişmeden) çözüldü.
 
 ### V6.1'e Özgü Sorunlar
 

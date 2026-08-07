@@ -32,6 +32,7 @@ public class UploadCleanupService {
     public void cleanUp() {
         cleanUpExpiredSessions();
         cleanUpOrphanedDirectories();
+        cleanUpStrayMergeTempFiles();
     }
 
     private void cleanUpExpiredSessions() {
@@ -58,6 +59,26 @@ public class UploadCleanupService {
             if (!knownSessionIds.contains(dirId)) {
                 log.warn("Sahipsiz yükleme dizini temizleniyor: {}", dirId);
                 storageService.deleteSessionDirectory(dirId);
+            }
+        }
+    }
+
+    private void cleanUpStrayMergeTempFiles() {
+        // MERGING durumundaki oturumlar zaten StartupRecoveryService tarafından ele alınıyor
+        // (uygulama her yeniden başladığında). Burada, hâlâ MERGING olmayan (yani aktif bir
+        // birleştirme denemesine ait olmayan) her data.log.*.tmp dosyası, geçmişte kalmış,
+        // temizlenmemiş bir kalıntıdır.
+        Set<UUID> mergingSessionIds = uploadSessionRepository
+                .findByStatusIn(List.of(UploadSessionStatus.MERGING)).stream()
+                .map(UploadSessionEntity::getId)
+                .collect(Collectors.toSet());
+
+        for (UUID sessionId : storageService.listSessionDirectoryIds()) {
+            if (mergingSessionIds.contains(sessionId)) {
+                continue;
+            }
+            if (storageService.deleteStrayMergeTempFiles(sessionId) > 0) {
+                log.warn("uploadId={} icin kalinti birlestirme gecici dosyasi temizlendi", sessionId);
             }
         }
     }

@@ -63,6 +63,26 @@ public class ChunkedUploadStorageService {
         return Files.exists(resolveMergedFile(uploadId));
     }
 
+    public int deleteStrayMergeTempFiles(UUID uploadId) {
+        Path sessionDir = resolveSessionDir(uploadId);
+        if (!Files.exists(sessionDir)) {
+            return 0;
+        }
+        try (var files = Files.list(sessionDir)) {
+            List<Path> strayFiles = files.filter(path -> {
+                        String name = path.getFileName().toString();
+                        return name.startsWith("data.log") && name.endsWith(".tmp");
+                    })
+                    .toList();
+            for (Path stray : strayFiles) {
+                Files.deleteIfExists(stray);
+            }
+            return strayFiles.size();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     public ChunkWriteResult writePart(UUID uploadId, long chunkIndex, byte[] content) {
         Path target = resolvePartFile(uploadId, chunkIndex);
 
