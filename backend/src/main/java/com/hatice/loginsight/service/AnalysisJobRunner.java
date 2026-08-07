@@ -32,10 +32,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -60,7 +57,9 @@ public class AnalysisJobRunner {
     private final LogMessageNormalizer logMessageNormalizer;
     private final ExceptionInfoExtractor exceptionInfoExtractor;
 
+    private final AnalysisCheckpointService analysisCheckpointService;
     private final long analysisProgressIntervalMs;
+    private final long checkpointIntervalMs;
     private final int maxStackTraceLines;
     private final int maxLogLineLength;
     private final int maxDistinctLoggers;
@@ -78,7 +77,9 @@ public class AnalysisJobRunner {
                               SensitiveDataMasker sensitiveDataMasker,
                               LogMessageNormalizer logMessageNormalizer,
                               ExceptionInfoExtractor exceptionInfoExtractor,
+                              AnalysisCheckpointService analysisCheckpointService,
                               @Value("${app.analysis-job.progress-interval-ms}") long analysisProgressIntervalMs,
+                              @Value("${app.analysis-job.checkpoint-interval-ms}") long checkpointIntervalMs,
                               @Value("${app.log-parsing.max-stack-trace-lines}") int maxStackTraceLines,
                               @Value("${app.log-parsing.max-log-line-length}") int maxLogLineLength,
                               @Value("${app.log-parsing.max-distinct-loggers}") int maxDistinctLoggers,
@@ -95,7 +96,9 @@ public class AnalysisJobRunner {
         this.sensitiveDataMasker = sensitiveDataMasker;
         this.logMessageNormalizer = logMessageNormalizer;
         this.exceptionInfoExtractor = exceptionInfoExtractor;
+        this.analysisCheckpointService = analysisCheckpointService;
         this.analysisProgressIntervalMs = analysisProgressIntervalMs;
+        this.checkpointIntervalMs = checkpointIntervalMs;
         this.maxStackTraceLines = maxStackTraceLines;
         this.maxLogLineLength = maxLogLineLength;
         this.maxDistinctLoggers = maxDistinctLoggers;
@@ -197,13 +200,13 @@ public class AnalysisJobRunner {
             CriPartialRecordAssembler criAssembler = detectedEnvelope == LogEnvelope.CONTAINER_CRI
                     ? new CriPartialRecordAssembler(maxLogLineLength) : null;
 
-            try (CountingInputStream countingStream = new CountingInputStream(Files.newInputStream(filePath));
-                 BufferedReader reader = new BufferedReader(
-                         new InputStreamReader(countingStream, StandardCharsets.UTF_8))) {
+            try (ByteOffsetLineReader reader = new ByteOffsetLineReader(filePath)) {
 
-                String line;
+                ByteOffsetLineReader.Line rawLine;
                 Instant lastProgressCheck = Instant.now();
-                while ((line = reader.readLine()) != null) {
+                Instant lastCheckpointSave = Instant.now();
+                while ((rawLine = reader.readLine()) != null) {
+                    String line = rawLine.getContent();
                     accumulator.incrementTotalLines();
 
                     EnvelopeStripResult stripResult = detectedEnvelope == LogEnvelope.NONE
@@ -224,7 +227,7 @@ public class AnalysisJobRunner {
                                     return;
                                 }
                                 int progress = totalBytes == 0 ? 100
-                                        : (int) Math.min(99, (countingStream.getBytesRead() * 100) / totalBytes);
+                                        : (int) Math.min(99, (reader.getCurrentPosition() * 100) / totalBytes);
                                 job.setProgress(progress);
                                 job = analysisJobRepository.save(job);
                                 checkpointSaved = true;
@@ -234,6 +237,11 @@ public class AnalysisJobRunner {
                                 }
                             }
                         }
+                    }
+
+                    if (Duration.between(lastCheckpointSave, now).toMillis() >= checkpointIntervalMs) {
+                        lastCheckpointSave = now;
+                        analysisCheckpointService.saveCheckpoint(jobId, reader.getCurrentPosition(), accumulator);
                     }
                 }
 
@@ -387,6 +395,7 @@ public class AnalysisJobRunner {
         job = analysisJobRepository.save(job);
 
         tempFileStorageService.delete(job.getId());
+        analysisCheckpointService.deleteCheckpoint(job.getId());
     }
 
     private void handleFailure(AnalysisJobEntity job, String errorCode, String errorMessage) {
@@ -403,5 +412,6 @@ public class AnalysisJobRunner {
         job = analysisJobRepository.save(job);
 
         tempFileStorageService.delete(job.getId());
+        analysisCheckpointService.deleteCheckpoint(job.getId());
     }
 }

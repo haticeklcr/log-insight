@@ -130,9 +130,7 @@ class AnalysisJobCancellationAndRestartTest extends AbstractIntegrationTest {
 
         AnalysisJobEntity firstRetry = analysisJobService.retryJob(saved.getId());
         assertThat(firstRetry.getRetryCount()).isEqualTo(1);
-
-        AnalysisJobEntity current = analysisJobRepository.findById(saved.getId()).orElseThrow();
-        assertThat(current.getStatus()).isEqualTo(JobStatus.PENDING);
+        assertThat(firstRetry.getStatus()).isEqualTo(JobStatus.PENDING);
     }
 
     @Test
