@@ -118,6 +118,7 @@
     "notAvailable": "—",
     "cancel": "İptal Et",
     "retry": "Tekrar Dene",
+    "resumedFromCheckpoint": "Analiz kaldığı yerden devam ediyor",
     "viewResult": "Sonucu Görüntüle",
     "seconds": "sn",
     "minutes": "dk"

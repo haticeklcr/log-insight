@@ -23,6 +23,36 @@ function sampleJob(overrides: Partial<AnalysisJobDetail> = {}): AnalysisJobDetai
 }
 
 describe("JobDetailView", () => {
+  it("resumedFromCheckpoint true olduğunda devam notu gösterir", () => {
+    render(
+      <JobDetailView
+        job={sampleJob({ status: "RUNNING", resumedFromCheckpoint: true })}
+        pollingErrorMessage={null}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onViewResult={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Analiz kaldığı yerden devam ediyor")).toBeInTheDocument();
+  });
+
+  it("resumedFromCheckpoint false/yok olduğunda devam notu gösterilmez", () => {
+    render(
+      <JobDetailView
+        job={sampleJob({ status: "RUNNING" })}
+        pollingErrorMessage={null}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onViewResult={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText("Analiz kaldığı yerden devam ediyor")).not.toBeInTheDocument();
+  });
+
   it("analiz adını ve durumu gösterir", () => {
     render(
       <JobDetailView

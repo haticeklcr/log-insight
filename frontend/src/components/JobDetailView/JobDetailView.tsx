@@ -60,6 +60,10 @@ export default function JobDetailView({
         <JobStatusBadge status={job.status} />
       </div>
 
+      {job.resumedFromCheckpoint && (
+        <p className={styles.resumedNote}>{t("jobDetail.resumedFromCheckpoint")}</p>
+      )}
+
       {pollingErrorMessage && <p className={styles.pollingWarning}>{pollingErrorMessage}</p>}
 
       {showProgressBar && (

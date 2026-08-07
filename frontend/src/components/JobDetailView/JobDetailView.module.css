@@ -33,6 +33,12 @@
   font-size: 0.85rem;
 }
 
+.resumedNote {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
 .progressBarOuter {
   position: relative;
   width: 100%;

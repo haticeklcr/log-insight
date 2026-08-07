@@ -22,6 +22,7 @@ public class AnalysisJobDetailDto {
     private String requestedParserType;
     private String detectedLogFormat;
     private String detectedEnvelope;
+    private boolean resumedFromCheckpoint;
     private AppliedFiltersDto appliedFilters;
 
     public AnalysisJobDetailDto() {
@@ -145,6 +146,14 @@ public class AnalysisJobDetailDto {
 
     public void setDetectedEnvelope(String detectedEnvelope) {
         this.detectedEnvelope = detectedEnvelope;
+    }
+
+    public boolean isResumedFromCheckpoint() {
+        return resumedFromCheckpoint;
+    }
+
+    public void setResumedFromCheckpoint(boolean resumedFromCheckpoint) {
+        this.resumedFromCheckpoint = resumedFromCheckpoint;
     }
 
     public AppliedFiltersDto getAppliedFilters() {

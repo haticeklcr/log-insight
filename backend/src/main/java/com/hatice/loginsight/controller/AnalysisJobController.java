@@ -107,6 +107,7 @@ public class AnalysisJobController {
         dto.setRequestedParserType(job.getRequestedParserType());
         dto.setDetectedLogFormat(job.getDetectedLogFormat());
         dto.setDetectedEnvelope(job.getDetectedEnvelope());
+        dto.setResumedFromCheckpoint(job.isResumedFromCheckpoint());
         dto.setAppliedFilters(AppliedFiltersDto.from(job));
         return dto;
     }

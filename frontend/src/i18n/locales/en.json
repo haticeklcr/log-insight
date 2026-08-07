@@ -118,6 +118,7 @@
     "notAvailable": "—",
     "cancel": "Cancel",
     "retry": "Retry",
+    "resumedFromCheckpoint": "Analysis is resuming from where it left off",
     "viewResult": "View Result",
     "seconds": "s",
     "minutes": "min"

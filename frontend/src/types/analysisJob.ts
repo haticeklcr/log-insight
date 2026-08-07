@@ -56,5 +56,6 @@ export interface AnalysisJobDetail {
   analysisId: number | null;
   requestedParserType?: string | null;
   detectedLogFormat?: string | null;
+  resumedFromCheckpoint?: boolean;
   appliedFilters?: AppliedFilters | null;
 }
