@@ -265,6 +265,7 @@ public class AnalysisJobService {
         job.setRetryCount(job.getRetryCount() + 1);
         job.setProgress(0);
         job.setCancelRequested(false);
+        job.setResumedFromCheckpoint(false);
         job.setStartedAt(null);
         job.setCompletedAt(null);
         job.setErrorCode(null);
