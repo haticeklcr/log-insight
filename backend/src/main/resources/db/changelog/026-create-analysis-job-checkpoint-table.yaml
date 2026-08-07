@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: 026-create-analysis-job-checkpoint-table
+      author: hatice
+      changes:
+        - createTable:
+            tableName: analysis_job_checkpoint
+            columns:
+              - column:
+                  name: job_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: byte_offset
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: snapshot_version
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accumulator_snapshot
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: analysis_job_checkpoint
+            baseColumnNames: job_id
+            referencedTableName: analysis_job
+            referencedColumnNames: id
+            constraintName: fk_checkpoint_analysis_job
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: analysis_job_checkpoint
